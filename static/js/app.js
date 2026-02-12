@@ -270,8 +270,14 @@ const App = {
 
     updatePaginationInfo() {
         const info = document.getElementById('pagination-info');
+        const pageInd = document.getElementById('page-indicator');
         const total = this.state.totalItems || 0;
         const displayed = this.state.displayedItems || 0;
+        const currentPage = this.state.currentPage || 1;
+        const totalPages = Math.ceil(total / 20) || 1; // 20 items per page
+        
+        // Show page indicator
+        pageInd.textContent = `Page ${currentPage} of ${totalPages}`;
         
         // Show count dynamically
         if (total === 0) {
@@ -343,11 +349,12 @@ const App = {
     async updateDashboard() {
         if (this.state.currentView !== 'dashboard') return;
         
-        // Auto-refresh always resets to page 1 (fresh top 20 processes)
-        // User can then click "Load More" to see additional pages
-        this.state.currentPage = 1;
-        this.state.displayedItems = 0;
-        await this.fetchAndDisplay();
+        // Only auto-refresh page 1 to preserve user's Load More pagination
+        // If user is on page 2+, let them browse at their own pace
+        if (this.state.currentPage === 1) {
+            this.state.displayedItems = 0;
+            await this.fetchAndDisplay();
+        }
     }
 };
 
