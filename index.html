@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body class="p-8">
+    <!-- Notifications Container -->
+    <div id="notification-container" class="fixed top-8 right-8 z-40 space-y-3 max-w-sm"></div>
+
     <div class="max-w-6xl mx-auto">
         <header class="flex justify-between items-center mb-12">
             <div>
@@ -125,6 +128,23 @@
 
             <div class="border-t border-slate-700 my-6"></div>
 
+            <!-- Refresh Interval Settings -->
+            <div class="mb-6 space-y-3">
+                <h3 class="text-lg font-bold text-green-300">📡 Auto-Refresh Settings</h3>
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm">Refresh Interval:</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="refresh-interval-input" min="5" max="300" class="w-16 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-center">
+                            <span class="text-xs text-slate-400">seconds</span>
+                        </div>
+                    </div>
+                    <div class="text-xs text-slate-500 ml-auto mr-0 w-auto">How often to refresh process list (5-300s)</div>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-700 my-6"></div>
+
             <!-- Legend -->
             <div class="bg-slate-800/50 p-4 rounded-lg mb-6 text-xs space-y-1">
                 <p class="text-slate-300 font-semibold mb-2">Status Legend:</p>
@@ -135,13 +155,13 @@
 
             <!-- Buttons -->
             <div class="flex gap-2">
-                <button onclick="App.resetThresholds()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold transition-all">
+                <button onclick="App.resetSettings()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold transition-all">
                     ↻ Reset
                 </button>
                 <button onclick="App.closeSettings()" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold transition-all">
                     Close
                 </button>
-                <button onclick="App.saveSettings()" class="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-xs font-bold transition-all">
+                <button onclick="App.saveDashboardSettings()" class="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-xs font-bold transition-all">
                     ✓ Save
                 </button>
             </div>

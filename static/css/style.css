@@ -208,3 +208,34 @@ body {
 .bg-cyan-500 {
     background-color: #06b6d4;
 }
+
+/* Notification Animations */
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+.animate-fade-out {
+    animation: fadeOut 0.3s ease-in;
+}

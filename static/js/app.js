@@ -8,6 +8,8 @@ const App = {
         totalItems: 0,
         displayedItems: 0,
         allProcesses: [],
+        refreshInterval: 30000,  // 30 seconds default
+        refreshIntervalId: null,
         thresholds: {
             cpuYellow: 20,
             cpuRed: 70,
@@ -17,22 +19,81 @@ const App = {
     },
 
     init() {
-        this.loadThresholds();
+        this.loadSettings();
         this.updateDashboard();
-        setInterval(() => this.updateDashboard(), 3000);
+        this.startRefreshInterval();
         this.loadAllApps();
         console.log('System Pulse - Local Dev Monitoring Initialized');
     },
 
-    loadThresholds() {
-        const stored = localStorage.getItem('appThresholds');
-        if (stored) {
-            this.state.thresholds = JSON.parse(stored);
+    startRefreshInterval() {
+        if (this.state.refreshIntervalId) {
+            clearInterval(this.state.refreshIntervalId);
+        }
+        this.state.refreshIntervalId = setInterval(() => this.updateDashboard(), this.state.refreshInterval);
+    },
+
+    showNotification(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('notification-container');
+        
+        // Limit to max 3 notifications - remove oldest if exceeding
+        const notifications = container.querySelectorAll('div');
+        if (notifications.length >= 3) {
+            notifications[0].classList.add('animate-fade-out');
+            setTimeout(() => notifications[0].remove(), 300);
+        }
+        
+        const notification = document.createElement('div');
+        
+        const colors = {
+            'info': 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300',
+            'success': 'bg-green-500/20 border-green-500/50 text-green-300',
+            'warning': 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300',
+            'error': 'bg-red-500/20 border-red-500/50 text-red-300'
+        };
+        
+        const icons = {
+            'info': '📡',
+            'success': '✅',
+            'warning': '⚠️',
+            'error': '❌'
+        };
+        
+        const colorClass = colors[type] || colors['info'];
+        const icon = icons[type] || icons['info'];
+        
+        notification.className = `glass px-4 py-3 rounded-lg border text-sm font-medium transition-all transform ${colorClass} animate-slide-in`;
+        notification.innerHTML = `<div class="flex items-center gap-2">
+            <span>${icon}</span>
+            <span>${message}</span>
+        </div>`;
+        
+        container.appendChild(notification);
+        
+        if (duration > 0) {
+            setTimeout(() => {
+                notification.classList.add('animate-fade-out');
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+        
+        return notification;
+    },
+
+    loadSettings() {
+        const storedThresholds = localStorage.getItem('appThresholds');
+        if (storedThresholds) {
+            this.state.thresholds = JSON.parse(storedThresholds);
+        }
+        const storedInterval = localStorage.getItem('appRefreshInterval');
+        if (storedInterval) {
+            this.state.refreshInterval = parseInt(storedInterval);
         }
     },
 
-    saveThresholds() {
+    saveSettings() {
         localStorage.setItem('appThresholds', JSON.stringify(this.state.thresholds));
+        localStorage.setItem('appRefreshInterval', this.state.refreshInterval.toString());
     },
 
     getStatus(value, yellowThreshold, redThreshold) {
@@ -60,33 +121,38 @@ const App = {
         document.getElementById('cpu-red-input').value = this.state.thresholds.cpuRed;
         document.getElementById('ram-yellow-input').value = this.state.thresholds.ramYellow;
         document.getElementById('ram-red-input').value = this.state.thresholds.ramRed;
+        document.getElementById('refresh-interval-input').value = this.state.refreshInterval / 1000;  // Convert to seconds for display
     },
 
     closeSettings() {
         document.getElementById('settings-modal').classList.add('hidden');
     },
 
-    saveSettings() {
+    saveDashboardSettings() {
         this.state.thresholds.cpuYellow = parseFloat(document.getElementById('cpu-yellow-input').value);
         this.state.thresholds.cpuRed = parseFloat(document.getElementById('cpu-red-input').value);
         this.state.thresholds.ramYellow = parseFloat(document.getElementById('ram-yellow-input').value);
         this.state.thresholds.ramRed = parseFloat(document.getElementById('ram-red-input').value);
-        this.saveThresholds();
+        this.state.refreshInterval = parseInt(document.getElementById('refresh-interval-input').value) * 1000;  // Convert to milliseconds
+        this.saveSettings();
         this.closeSettings();
+        this.startRefreshInterval();  // Restart interval with new value
+        this.showNotification('✅ Settings saved', 'success', 3000);
         this.state.currentPage = 1;
         this.state.displayedItems = 0;
         this.state.allProcesses = [];
         this.updateDashboard();
     },
 
-    resetThresholds() {
+    resetSettings() {
         this.state.thresholds = {
             cpuYellow: 20,
             cpuRed: 70,
             ramYellow: 50,
             ramRed: 80
         };
-        this.saveThresholds();
+        this.state.refreshInterval = 30000;
+        this.saveSettings();
         this.openSettings();
     },
 
@@ -297,15 +363,31 @@ const App = {
     },
 
     async loadMore() {
+        const btn = document.getElementById('load-more-btn');
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        
+        this.showNotification('🔍 Reading system processes...', 'info', 0);
         this.state.currentPage += 1;
-        await this.fetchAndDisplay();
+        await this.fetchAndDisplay(true);  // true = show notifications
+        
+        btn.disabled = false;
+        btn.style.opacity = '1';
     },
 
-    async fetchAndDisplay() {
+    async fetchAndDisplay(showNotifications = false) {
         try {
             const response = await fetch(`/api/dashboard?page=${this.state.currentPage}&t=${Date.now()}`);
-            if (!response.ok) throw new Error('Network response was not ok');
+            
+            if (!response.ok) {
+                if (showNotifications) {
+                    this.showNotification('Failed to fetch processes', 'error', 5000);
+                }
+                throw new Error('Network response was not ok');
+            }
+            
             const data = await response.json();
+            
             const container = document.getElementById('dashboard');
             
             // Ensure correct grid class for dashboard view
@@ -319,6 +401,7 @@ const App = {
                     container.innerHTML = '<div class="col-span-4 text-center text-slate-500 py-20">Monitoring network connections...</div>';
                 }
                 this.updatePaginationInfo();
+                this.showNotification('No additional processes found', 'warning', 3000);
                 return;
             }
 
@@ -341,8 +424,17 @@ const App = {
             
             this.state.lastUpdated = new Date();
             this.updatePaginationInfo();
+            
+            // Show success notification only for manual Load More
+            if (showNotifications) {
+                const itemsText = data.items.length === 1 ? 'process' : 'processes';
+                this.showNotification(`✅ Loaded ${data.items.length} ${itemsText} (Page ${data.page})`, 'success', 3000);
+            }
         } catch (error) {
             console.error('Update failed:', error);
+            if (showNotifications) {
+                this.showNotification('Failed to load processes', 'error', 5000);
+            }
         }
     },
 
