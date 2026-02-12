@@ -292,8 +292,11 @@ const App = {
             const data = await response.json();
             const container = document.getElementById('dashboard');
             
-            // Remove all-apps-view class for dashboard
+            // Ensure correct grid class for dashboard view
             container.classList.remove('all-apps-view');
+            if (!container.classList.contains('app-grid')) {
+                container.classList.add('app-grid');
+            }
             
             if (!data.items || data.items.length === 0) {
                 if (this.state.currentPage === 1) {
@@ -330,9 +333,11 @@ const App = {
     async updateDashboard() {
         if (this.state.currentView !== 'dashboard') return;
         
-        // Reset on auto-refresh
-        this.state.currentPage = 1;
-        this.state.displayedItems = 0;
+        // Only reset to page 1 if currently on page 1
+        // This preserves Load More state if user has paginated
+        if (this.state.currentPage === 1) {
+            this.state.displayedItems = 0;
+        }
         await this.fetchAndDisplay();
     }
 };
