@@ -87,7 +87,7 @@ const App = {
         }
         const storedInterval = localStorage.getItem('appRefreshInterval');
         if (storedInterval) {
-            this.state.refreshInterval = parseInt(storedInterval);
+            this.state.refreshInterval = Number.parseInt(storedInterval, 10);
         }
     },
 
@@ -129,11 +129,11 @@ const App = {
     },
 
     saveDashboardSettings() {
-        this.state.thresholds.cpuYellow = parseFloat(document.getElementById('cpu-yellow-input').value);
-        this.state.thresholds.cpuRed = parseFloat(document.getElementById('cpu-red-input').value);
-        this.state.thresholds.ramYellow = parseFloat(document.getElementById('ram-yellow-input').value);
-        this.state.thresholds.ramRed = parseFloat(document.getElementById('ram-red-input').value);
-        this.state.refreshInterval = parseInt(document.getElementById('refresh-interval-input').value) * 1000;  // Convert to milliseconds
+        this.state.thresholds.cpuYellow = Number.parseFloat(document.getElementById('cpu-yellow-input').value);
+        this.state.thresholds.cpuRed = Number.parseFloat(document.getElementById('cpu-red-input').value);
+        this.state.thresholds.ramYellow = Number.parseFloat(document.getElementById('ram-yellow-input').value);
+        this.state.thresholds.ramRed = Number.parseFloat(document.getElementById('ram-red-input').value);
+        this.state.refreshInterval = Number.parseInt(document.getElementById('refresh-interval-input').value, 10) * 1000;  // Convert to milliseconds
         this.saveSettings();
         this.closeSettings();
         this.startRefreshInterval();  // Restart interval with new value
@@ -454,6 +454,6 @@ const App = {
 document.addEventListener('DOMContentLoaded', () => App.init());
 
 // Global exposed for dropdown
-window.setTheme = (theme) => App.setTheme(theme);
-window.switchView = (view) => App.switchView(view);
+globalThis.setTheme = (theme) => App.setTheme(theme);
+globalThis.switchView = (view) => App.switchView(view);
 

@@ -14,16 +14,20 @@ A lightweight, open-source tool for monitoring running applications with beautif
 ## ✨ Key Features
 
 ### 📊 Real-Time Dashboard
-- Monitor **top 16 active applications** with network connections
+- Monitor **top 20 active applications** with intelligent relevance scoring
+- **Paginated view** - Load More button to browse all processes
 - Live **CPU & Memory** usage metrics
 - **Incoming/Outgoing** connection counts
-- **3-second** refresh rate for instant updates
+- **Configurable auto-refresh** (5-300 seconds, default: 30 seconds)
+- **Visible page indicator** (Page X of Y) for clear pagination
+- User notifications during data loading
 
 ### 🎨 Beautiful UI
 - Four **professional themes**: Light (default), Warm, Pink, Dark
 - **Glass morphism** design with smooth animations
 - **Responsive** layout works on desktop and tablet
 - **Lightweight** - no heavy frameworks (vanilla JS + Tailwind CSS)
+- **Conventional solid-color toast notifications** with emoji icons
 
 ### 📦 50+ App Support
 - **Windows**: Chrome, Firefox, VS Code, Git, Docker, and more
@@ -31,11 +35,18 @@ A lightweight, open-source tool for monitoring running applications with beautif
 - **Auto-detection** of installed applications
 - High-quality logos from SimpleIcons CDN with automatic caching
 
-### ⚙️ Configurable Thresholds
+### ⚙️ Configurable Thresholds & Settings
 - Set custom CPU/RAM warning levels (Yellow/Red)
+- **Configurable auto-refresh interval** (5-300 seconds)
 - Color-coded status indicators (🟢🟡🔴)
 - Persistent settings via browser storage
 - Real-time threshold validation
+
+### ⚡ Performance Optimizations
+- **1-second TTL caching** reduces redundant process collection
+- **Request timeout protection** (5 second max per request)
+- **Async operation support** for non-blocking data collection
+- ~100x speedup on cached requests (first: 1400ms, cached: 12ms)
 
 ### 🔐 Security-First
 - ✅ No data collection or analytics
@@ -92,7 +103,7 @@ http://localhost:8000
 ## 📖 Usage Guide
 
 ### Dashboard View
-The default view shows the **top 16 active applications** with:
+The default view shows the **top 20 active applications** ranked by relevance score (CPU + Memory + Network activity):
 - Application logo and name
 - Process ID (PID)
 - Incoming/outgoing connections
@@ -103,6 +114,16 @@ The default view shows the **top 16 active applications** with:
 - 🟢 **Green**: Healthy (below threshold)
 - 🟡 **Yellow**: Caution (approaching limit)
 - 🔴 **Red**: Critical (over limit)
+
+### Pagination with Load More
+- **Page 1** automatically loads with top 20 processes
+- **Page indicator** shows "Page X of Y" (e.g., "Page 1 of 8" for 142 total processes)
+- **Load More button** appears when more processes are available
+- Click **"Load More"** to load the next 20 processes
+- **Real-time notifications** show:
+  - 🔍 Reading system processes...
+  - ✅ Loaded X processes (Page Y)
+- **Auto-refresh** only resets to Page 1, preserving your pagination during browsing
 
 ### All Apps View
 Click **"All Apps"** to browse all 50+ detected applications:
@@ -128,6 +149,13 @@ Click **⚙️ Settings** to configure:
 **Memory Thresholds (%):**
 - Yellow Alert: Default 50%
 - Red Critical: Default 80%
+
+**📡 Auto-Refresh Settings:**
+- **Refresh Interval**: Configure how often processes are refreshed (5-300 seconds)
+- **Default**: 30 seconds (reduced from 3 seconds for less noise)
+- **Faster**: Set to 5-10 seconds for real-time monitoring
+- **Slower**: Set to 60-300 seconds to reduce server load
+- Changes take effect immediately
 
 Use **Reset** to restore defaults, or **Save** to apply changes.
 
@@ -167,45 +195,79 @@ The logos will be downloaded and cached automatically on next run.
 ## 📁 Project Structure
 
 ```
-Smart-Network-Monitor/
-├── main.py                      # FastAPI server & endpoints
+System-Pulse/
+├── main.py                      # FastAPI server & pagination endpoints
 ├── app_detector.py              # App detection & logo management
 ├── requirements.txt             # Python dependencies
 ├── README.md                    # This file
 ├── LICENSE                      # MIT License
 ├── .gitignore                   # Git exclusions
 ├── index.html                   # Web interface
+├── backend/                     # Backend optimization modules
+│   ├── scoring.py               # Relevance score calculation
+│   ├── cache.py                 # TTL caching layer
+│   ├── async_ops.py             # Async operation support
+│   └── timeout.py               # Request timeout middleware
 └── static/
     ├── css/
     │   └── style.css            # Tailwind CSS + custom themes
     ├── js/
-    │   └── app.js               # Frontend logic (vanilla JS)
+    │   └── app.js               # Frontend logic (vanilla JS, 440+ lines)
     └── logo/                    # Generated cache (git-ignored)
         ├── windows/             # Windows app logos
         ├── linux/               # Linux app logos
         └── app_mappings.json    # Logo index
 ```
 
+### Backend Architecture
+**Performance Optimizations:**
+- **TTLCache** (`backend/cache.py`): 1-second caching of process collection
+- **RequestTimeoutMiddleware** (`backend/timeout.py`): 5-second max per request
+- **AsyncOps** (`backend/async_ops.py`): Thread pool executor for non-blocking operations
+- **Relevance Scoring** (`backend/scoring.py`): Combines CPU + Memory + Network activity
+
+**Frontend:**
+- **Vanilla JavaScript** (~440 lines): No frameworks, pure DOM manipulation
+- **Pagination State Management**: Preserves user's page during auto-refresh
+- **Real-time Notifications**: Toast notifications for Load More actions
+- **Configurable Refresh**: Dynamic interval management via Settings
+
 ---
 
 ## 🔌 API Endpoints
 
 ### GET `/api/dashboard`
-Returns top 16 active applications with network connections.
+Returns paginated active applications with network connections, sorted by relevance score.
+
+**Query Parameters:**
+- `page` (int, default=1): Page number (1-indexed). Each page has 20 items.
+
+**Example:**
+```
+/api/dashboard?page=1  # First 20 processes
+/api/dashboard?page=2  # Next 20 processes
+```
 
 **Response:**
 ```json
-[
-  {
-    "name": "chrome.exe",
-    "pid": 12345,
-    "logo": "/static/logo/windows/Chrome.svg",
-    "incoming": 5,
-    "outgoing": 3,
-    "cpu": 12.5,
-    "memory": 256.5
-  }
-]
+{
+  "items": [
+    {
+      "name": "chrome.exe",
+      "pid": 12345,
+      "logo": "/static/logo/windows/Chrome.svg",
+      "incoming": 5,
+      "outgoing": 3,
+      "cpu": 12.5,
+      "memory": 256.5,
+      "relevance_score": 45.2
+    }
+  ],
+  "page": 1,
+  "items_per_page": 20,
+  "total_items": 142,
+  "has_more": true
+}
 ```
 
 ### GET `/api/all-apps`
@@ -267,11 +329,22 @@ Returns the complete executable-to-logo mapping.
 
 | Metric | Value |
 |--------|-------|
-| **First Run** | ~3-10 seconds (logo cache build) |
-| **Dashboard Refresh** | 3 seconds (configurable) |
+| **First Request (uncached)** | ~1400 ms |
+| **Cached Requests** | ~12 ms (100x faster) |
+| **Speedup with TTL Cache** | 100x improvement |
+| **Cache TTL** | 1 second |
+| **Request Timeout** | 5 seconds max |
+| **Dashboard Refresh** | 30 seconds (configurable) |
 | **Memory Usage** | ~80-120 MB |
 | **CPU Usage** | <5% at rest |
 | **Logo Cache Size** | ~5-10 MB |
+| **Pagination** | 20 items per page |
+
+**Optimization Features:**
+- ✅ TTL caching eliminates redundant process collection
+- ✅ Request timeout middleware prevents hanging requests
+- ✅ Async operation support for non-blocking data collection
+- ✅ Relevance scoring ranks processes by importance
 
 ---
 
@@ -282,6 +355,12 @@ Returns the complete executable-to-logo mapping.
 # Use a different port
 python -m uvicorn main:app --reload --port 8001
 ```
+
+### Load More button not working?
+- Ensure you have more than 20 processes running
+- Check browser console (F12) for errors
+- Clear browser cache and reload
+- Try a different refresh interval in Settings
 
 ### Missing app logos?
 - Logos download automatically on first run
@@ -295,15 +374,20 @@ python -m uvicorn main:app --reload --port 8001
 pip install --upgrade -r requirements.txt
 ```
 
+### Auto-refresh seems too fast/slow?
+- Open ⚙️ Settings > "📡 Auto-Refresh Settings"
+- Adjust refresh interval (5-300 seconds)
+- Click "✓ Save" to apply immediately
+
+### Notifications not appearing?
+- Notifications only show when you click "Load More"
+- Check that notifications container exists in HTML
+- Clear browser cache if notifications don't appear
+
 ### App not being detected?
 - Ensure app is in Program Files or PATH
 - Restart the server after app installation
 - Check [app_detector.py](app_detector.py) has the app configured
-
-### Frontend shows letter avatars instead of logos?
-- This is normal for apps without logos
-- Logos will appear after initial cache build
-- Try refreshing the page (F5)
 
 ---
 

@@ -41,7 +41,7 @@ async def timeout_middleware(request: Request, call_next: Callable, timeout_seco
                 "timeout_seconds": timeout_seconds
             }
         )
-    except Exception as e:
+    except Exception:
         # Let other exceptions propagate
         raise
 
