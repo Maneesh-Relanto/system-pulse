@@ -270,10 +270,20 @@ const App = {
 
     updatePaginationInfo() {
         const info = document.getElementById('pagination-info');
-        info.textContent = `Showing ${this.state.displayedItems} of ${this.state.totalItems} processes`;
+        const total = this.state.totalItems || 0;
+        const displayed = this.state.displayedItems || 0;
+        
+        // Show count dynamically
+        if (total === 0) {
+            info.textContent = 'No processes detected';
+        } else if (displayed === total) {
+            info.textContent = `Showing all ${total} processes`;
+        } else {
+            info.textContent = `Showing ${displayed} of ${total} processes · ${total - displayed} more available`;
+        }
         
         const btn = document.getElementById('load-more-btn');
-        if (this.state.displayedItems < this.state.totalItems) {
+        if (displayed < total) {
             btn.style.display = 'block';
         } else {
             btn.style.display = 'none';
@@ -333,11 +343,10 @@ const App = {
     async updateDashboard() {
         if (this.state.currentView !== 'dashboard') return;
         
-        // Only reset to page 1 if currently on page 1
-        // This preserves Load More state if user has paginated
-        if (this.state.currentPage === 1) {
-            this.state.displayedItems = 0;
-        }
+        // Auto-refresh always resets to page 1 (fresh top 20 processes)
+        // User can then click "Load More" to see additional pages
+        this.state.currentPage = 1;
+        this.state.displayedItems = 0;
         await this.fetchAndDisplay();
     }
 };
