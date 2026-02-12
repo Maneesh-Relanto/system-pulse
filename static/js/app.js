@@ -36,9 +36,9 @@ const App = {
     showNotification(message, type = 'info', duration = 3000) {
         const container = document.getElementById('notification-container');
         
-        // Limit to max 3 notifications - remove oldest if exceeding
+        // Limit to max 2 notifications - remove oldest if exceeding
         const notifications = container.querySelectorAll('div');
-        if (notifications.length >= 3) {
+        if (notifications.length >= 2) {
             notifications[0].classList.add('animate-fade-out');
             setTimeout(() => notifications[0].remove(), 300);
         }
@@ -46,10 +46,10 @@ const App = {
         const notification = document.createElement('div');
         
         const colors = {
-            'info': 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300',
-            'success': 'bg-green-500/20 border-green-500/50 text-green-300',
-            'warning': 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300',
-            'error': 'bg-red-500/20 border-red-500/50 text-red-300'
+            'info': 'bg-blue-600 text-white',
+            'success': 'bg-green-600 text-white',
+            'warning': 'bg-orange-600 text-white',
+            'error': 'bg-red-600 text-white'
         };
         
         const icons = {
@@ -62,7 +62,7 @@ const App = {
         const colorClass = colors[type] || colors['info'];
         const icon = icons[type] || icons['info'];
         
-        notification.className = `glass px-4 py-3 rounded-lg border text-sm font-medium transition-all transform ${colorClass} animate-slide-in`;
+        notification.className = `px-4 py-3 rounded-lg text-sm font-medium transition-all transform shadow-lg ${colorClass} animate-slide-in`;
         notification.innerHTML = `<div class="flex items-center gap-2">
             <span>${icon}</span>
             <span>${message}</span>
