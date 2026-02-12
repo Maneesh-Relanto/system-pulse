@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 import os
 from app_detector import get_detected_apps, get_app_info
+from backend.scoring import sort_processes_by_relevance
 
 app = FastAPI(title="System Pulse API")
 
@@ -14,9 +15,20 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 APP_ICONS = get_detected_apps()
 
 DEFAULT_ICON = "" 
+ITEMS_PER_PAGE = 20
 
 @app.get("/api/dashboard")
-def get_dashboard_data():
+def get_dashboard_data(page: int = 1):
+    """
+    Get paginated process list sorted by relevance score.
+    Combines CPU, memory, and network activity priority.
+    
+    Args:
+        page: Page number (1-indexed). Each page has 20 items.
+    
+    Returns:
+        List of process dicts with relevance_score included
+    """
     apps = {}
     # kind='inet' ensures we only get IPv4/IPv6 connections
     connections = psutil.net_connections(kind='inet')
@@ -62,9 +74,21 @@ def get_dashboard_data():
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
 
-    # Sort by activity (incoming + outgoing) and take top 16 for a 4x4 matrix
-    sorted_apps = sorted(apps.values(), key=lambda x: (x['incoming'] + x['outgoing']), reverse=True)
-    return sorted_apps[:16]
+    # Sort by relevance score (combines CPU, memory, and network activity)
+    sorted_apps = sort_processes_by_relevance(list(apps.values()))
+    
+    # Paginate results (20 per page)
+    start_idx = (page - 1) * ITEMS_PER_PAGE
+    end_idx = start_idx + ITEMS_PER_PAGE
+    paginated_apps = sorted_apps[start_idx:end_idx]
+    
+    return {
+        "items": paginated_apps,
+        "page": page,
+        "items_per_page": ITEMS_PER_PAGE,
+        "total_items": len(sorted_apps),
+        "has_more": end_idx < len(sorted_apps)
+    }
 
 @app.get("/api/all-apps")
 def get_all_apps():

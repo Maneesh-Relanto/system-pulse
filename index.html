@@ -51,6 +51,14 @@
             </div>
         </main>
 
+        <!-- Load More Section -->
+        <div class="mt-8 flex flex-col items-center gap-4" id="load-more-section">
+            <button onclick="App.loadMore()" class="glass px-6 py-3 rounded-lg text-sm font-bold bg-cyan-500/20 hover:bg-cyan-500/40 transition-all" id="load-more-btn" style="display: none;">
+                📥 Load More
+            </button>
+            <p class="text-xs text-slate-500" id="pagination-info"></p>
+        </div>
+
         <footer class="mt-16 pt-8 border-t border-white/5 flex justify-between items-center text-slate-600 text-xs font-bold uppercase tracking-widest">
             <p>Protected Environment &bull; No sensitive data captured</p>
             <p id="uptime-display">System Secure</p>

@@ -4,6 +4,10 @@ const App = {
         theme: 'light',
         lastUpdated: null,
         currentView: 'dashboard',  // 'dashboard' or 'all-apps'
+        currentPage: 1,
+        totalItems: 0,
+        displayedItems: 0,
+        allProcesses: [],
         thresholds: {
             cpuYellow: 20,
             cpuRed: 70,
@@ -69,6 +73,9 @@ const App = {
         this.state.thresholds.ramRed = parseFloat(document.getElementById('ram-red-input').value);
         this.saveThresholds();
         this.closeSettings();
+        this.state.currentPage = 1;
+        this.state.displayedItems = 0;
+        this.state.allProcesses = [];
         this.updateDashboard();
     },
 
@@ -115,6 +122,9 @@ const App = {
         if (view === 'all-apps') {
             this.displayAllApps();
         } else {
+            this.state.currentPage = 1;
+            this.state.displayedItems = 0;
+            this.state.allProcesses = [];
             this.updateDashboard();
         }
     },
@@ -185,13 +195,99 @@ const App = {
         `).join('');
         
         this.state.lastUpdated = new Date();
+        document.getElementById('load-more-btn').style.display = 'none';
+        document.getElementById('pagination-info').textContent = '';
     },
 
-    async updateDashboard() {
-        if (this.state.currentView !== 'dashboard') return;
+    renderProcessCard(app) {
+        return `
+            <div class="glass p-6 rounded-2xl flex flex-col items-center group relative overflow-hidden transition-all duration-500">
+                <div class="absolute top-0 right-0 p-2">
+                    <span class="text-[10px] font-mono text-slate-500">PID: ${app.pid}</span>
+                </div>
+                
+                <div class="w-16 h-16 mb-4 relative">
+                    ${this.renderIcon(app)}
+                </div>
+                
+                <h3 class="font-bold text-center mb-4 truncate w-full px-2" title="${app.name}">${app.name}</h3>
+                
+                <div class="grid grid-cols-2 gap-4 w-full">
+                    <div class="text-center">
+                        <p class="text-[10px] text-slate-500 uppercase tracking-wider">Incoming</p>
+                        <p class="text-lg font-bold text-cyan-400">${app.incoming}</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[10px] text-slate-500 uppercase tracking-wider">Outgoing</p>
+                        <p class="text-lg font-bold text-blue-400">${app.outgoing}</p>
+                    </div>
+                </div>
+                
+                <div class="mt-4 w-full grid grid-cols-2 gap-2">
+                    <div class="space-y-1">
+                        ${(() => {
+                            const cpuStatus = this.getStatus(app.cpu, this.state.thresholds.cpuYellow, this.state.thresholds.cpuRed);
+                            const barColor = this.getBarColorClass(app.cpu, this.state.thresholds.cpuYellow, this.state.thresholds.cpuRed);
+                            const textColor = this.getColorClass(app.cpu, this.state.thresholds.cpuYellow, this.state.thresholds.cpuRed);
+                            return `
+                        <div class="w-full h-[2px] bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full ${barColor} transition-all duration-1000" style="width: ${Math.min(app.cpu * 4, 100)}%"></div>
+                        </div>
+                        <div class="flex justify-between w-full items-center group">
+                            <div class="flex items-center gap-1">
+                                <span class="text-[11px] text-slate-500 font-bold uppercase">CPU</span>
+                                <span class="text-xs cursor-help tooltip-trigger" title="Thresholds: Yellow ≥ ${this.state.thresholds.cpuYellow}% | Red ≥ ${this.state.thresholds.cpuRed}%">ⓘ</span>
+                            </div>
+                            <span class="${textColor} text-[11px] font-bold">${app.cpu.toFixed(1)}% ${cpuStatus.icon}</span>
+                        </div>
+                        `;
+                        })()}
+                    </div>
+                    <div class="space-y-1">
+                        ${(() => {
+                            const ramPercent = Math.min(app.memory / 10, 100);
+                            const ramStatus = this.getStatus(ramPercent, this.state.thresholds.ramYellow, this.state.thresholds.ramRed);
+                            const barColor = this.getBarColorClass(ramPercent, this.state.thresholds.ramYellow, this.state.thresholds.ramRed);
+                            const textColor = this.getColorClass(ramPercent, this.state.thresholds.ramYellow, this.state.thresholds.ramRed);
+                            return `
+                        <div class="w-full h-[2px] bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full ${barColor} transition-all duration-1000" style="width: ${ramPercent}%"></div>
+                        </div>
+                        <div class="flex justify-between w-full items-center">
+                            <div class="flex items-center gap-1">
+                                <span class="text-[11px] text-slate-500 font-bold uppercase">RAM</span>
+                                <span class="text-xs cursor-help tooltip-trigger" title="Thresholds: Yellow ≥ ${this.state.thresholds.ramYellow}% | Red ≥ ${this.state.thresholds.ramRed}%">ⓘ</span>
+                            </div>
+                            <span class="${textColor} text-[11px] font-bold">${app.memory > 1024 ? (app.memory/1024).toFixed(1) + 'GB' : Math.round(app.memory) + 'MB'} ${ramStatus.icon}</span>
+                        </div>
+                        `;
+                        })()}
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    updatePaginationInfo() {
+        const info = document.getElementById('pagination-info');
+        info.textContent = `Showing ${this.state.displayedItems} of ${this.state.totalItems} processes`;
         
+        const btn = document.getElementById('load-more-btn');
+        if (this.state.displayedItems < this.state.totalItems) {
+            btn.style.display = 'block';
+        } else {
+            btn.style.display = 'none';
+        }
+    },
+
+    async loadMore() {
+        this.state.currentPage += 1;
+        await this.fetchAndDisplay();
+    },
+
+    async fetchAndDisplay() {
         try {
-            const response = await fetch('/api/dashboard?t=' + Date.now());
+            const response = await fetch(`/api/dashboard?page=${this.state.currentPage}&t=${Date.now()}`);
             if (!response.ok) throw new Error('Network response was not ok');
             const data = await response.json();
             const container = document.getElementById('dashboard');
@@ -199,82 +295,45 @@ const App = {
             // Remove all-apps-view class for dashboard
             container.classList.remove('all-apps-view');
             
-            if (!data || data.length === 0) {
-                container.innerHTML = '<div class="col-span-4 text-center text-slate-500 py-20">Monitoring network connections...</div>';
+            if (!data.items || data.items.length === 0) {
+                if (this.state.currentPage === 1) {
+                    container.innerHTML = '<div class="col-span-4 text-center text-slate-500 py-20">Monitoring network connections...</div>';
+                }
+                this.updatePaginationInfo();
                 return;
             }
 
-            container.innerHTML = data.map(app => `
-                <div class="glass p-6 rounded-2xl flex flex-col items-center group relative overflow-hidden transition-all duration-500">
-                    <div class="absolute top-0 right-0 p-2">
-                        <span class="text-[10px] font-mono text-slate-500">PID: ${app.pid}</span>
-                    </div>
-                    
-                    <div class="w-16 h-16 mb-4 relative">
-                        ${this.renderIcon(app)}
-                    </div>
-                    
-                    <h3 class="font-bold text-center mb-4 truncate w-full px-2" title="${app.name}">${app.name}</h3>
-                    
-                    <div class="grid grid-cols-2 gap-4 w-full">
-                        <div class="text-center">
-                            <p class="text-[10px] text-slate-500 uppercase tracking-wider">Incoming</p>
-                            <p class="text-lg font-bold text-cyan-400">${app.incoming}</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-[10px] text-slate-500 uppercase tracking-wider">Outgoing</p>
-                            <p class="text-lg font-bold text-blue-400">${app.outgoing}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-4 w-full grid grid-cols-2 gap-2">
-                        <div class="space-y-1">
-                            ${(() => {
-                                const cpuStatus = this.getStatus(app.cpu, this.state.thresholds.cpuYellow, this.state.thresholds.cpuRed);
-                                const barColor = this.getBarColorClass(app.cpu, this.state.thresholds.cpuYellow, this.state.thresholds.cpuRed);
-                                const textColor = this.getColorClass(app.cpu, this.state.thresholds.cpuYellow, this.state.thresholds.cpuRed);
-                                return `
-                            <div class="w-full h-[2px] bg-slate-800 rounded-full overflow-hidden">
-                                <div class="h-full ${barColor} transition-all duration-1000" style="width: ${Math.min(app.cpu * 4, 100)}%"></div>
-                            </div>
-                            <div class="flex justify-between w-full items-center group">
-                                <div class="flex items-center gap-1">
-                                    <span class="text-[11px] text-slate-500 font-bold uppercase">CPU</span>
-                                    <span class="text-xs cursor-help tooltip-trigger" title="Thresholds: Yellow ≥ ${this.state.thresholds.cpuYellow}% | Red ≥ ${this.state.thresholds.cpuRed}%">ⓘ</span>
-                                </div>
-                                <span class="${textColor} text-[11px] font-bold">${app.cpu.toFixed(1)}% ${cpuStatus.icon}</span>
-                            </div>
-                            `;
-                            })()}
-                        </div>
-                        <div class="space-y-1">
-                            ${(() => {
-                                const ramPercent = Math.min(app.memory / 10, 100);
-                                const ramStatus = this.getStatus(ramPercent, this.state.thresholds.ramYellow, this.state.thresholds.ramRed);
-                                const barColor = this.getBarColorClass(ramPercent, this.state.thresholds.ramYellow, this.state.thresholds.ramRed);
-                                const textColor = this.getColorClass(ramPercent, this.state.thresholds.ramYellow, this.state.thresholds.ramRed);
-                                return `
-                            <div class="w-full h-[2px] bg-slate-800 rounded-full overflow-hidden">
-                                <div class="h-full ${barColor} transition-all duration-1000" style="width: ${ramPercent}%"></div>
-                            </div>
-                            <div class="flex justify-between w-full items-center">
-                                <div class="flex items-center gap-1">
-                                    <span class="text-[11px] text-slate-500 font-bold uppercase">RAM</span>
-                                    <span class="text-xs cursor-help tooltip-trigger" title="Thresholds: Yellow ≥ ${this.state.thresholds.ramYellow}% | Red ≥ ${this.state.thresholds.ramRed}%">ⓘ</span>
-                                </div>
-                                <span class="${textColor} text-[11px] font-bold">${app.memory > 1024 ? (app.memory/1024).toFixed(1) + 'GB' : Math.round(app.memory) + 'MB'} ${ramStatus.icon}</span>
-                            </div>
-                            `;
-                            })()}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+            // Store total info
+            this.state.totalItems = data.total_items;
+            this.state.displayedItems = data.items_per_page * (data.page - 1) + data.items.length;
+            
+            // If first page, replace container; otherwise append
+            if (data.page === 1) {
+                container.innerHTML = '';
+            }
+            
+            // Append new items
+            data.items.forEach(app => {
+                const cardHtml = this.renderProcessCard(app);
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = cardHtml;
+                container.appendChild(tempDiv.firstElementChild);
+            });
             
             this.state.lastUpdated = new Date();
+            this.updatePaginationInfo();
         } catch (error) {
             console.error('Update failed:', error);
         }
+    },
+
+    async updateDashboard() {
+        if (this.state.currentView !== 'dashboard') return;
+        
+        // Reset on auto-refresh
+        this.state.currentPage = 1;
+        this.state.displayedItems = 0;
+        await this.fetchAndDisplay();
     }
 };
 
