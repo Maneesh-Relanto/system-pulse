@@ -22,12 +22,37 @@ A lightweight, open-source tool for monitoring running applications with beautif
 - **Visible page indicator** (Page X of Y) for clear pagination
 - User notifications during data loading
 
+### 🔍 System Snapshot View
+- **View all 147+ running processes** in a comprehensive table
+- **6-column layout**: Process Name, CPU %, Memory MB, Incoming, Outgoing, PID
+- **Real-time search** by process name (case-insensitive)
+- **CPU filter slider** (0-100%) and **Memory filter slider** (0-1000 MB)
+- **Sortable columns** with visual indicators (↑/↓)
+- **CSV export** - Download snapshot as timestamped CSV file
+- **Combined filtering** - Apply multiple filters simultaneously
+- **Fresh data** - No caching for accurate real-time snapshot
+
+### 🎯 Self-Monitoring Dashboard
+- **4 visual indicator cards** showing system health:
+  - **CPU Usage** - Real-time percentage with color-coded progress bar
+  - **RAM Usage** - Current memory consumption with status indicator
+  - **Uptime** - System runtime in human-readable format (days, hours, minutes)
+  - **Last Deviation** - Alerts for anomalous process behavior
+- **Automatic deviation detection**:
+  - 🟡 Warning: Process >70% CPU or >500MB memory
+  - 🔴 Critical: Process >90% CPU or >800MB memory
+  - Shows process name, metric type, severity level, and timestamp
+- **5-second refresh cycle** - Independent from dashboard refresh interval
+- **Only visible on Dashboard view** - Hidden in Snapshot for clarity
+
 ### 🎨 Beautiful UI
 - Four **professional themes**: Light (default), Warm, Pink, Dark
-- **Glass morphism** design with smooth animations
+- **Modern design** with smooth animations and transitions
 - **Responsive** layout works on desktop and tablet
 - **Lightweight** - no heavy frameworks (vanilla JS + Tailwind CSS)
-- **Conventional solid-color toast notifications** with emoji icons
+- **Solid modal backgrounds** with enhanced contrast and depth effects
+- **Accessible color patterns** - Readable across all themes
+- **Conventional toast notifications** with emoji icons
 
 ### 📦 50+ App Support
 - **Windows**: Chrome, Firefox, VS Code, Git, Docker, and more
@@ -68,8 +93,8 @@ A lightweight, open-source tool for monitoring running applications with beautif
 
 **1. Clone the repository:**
 ```bash
-git clone https://github.com/yourusername/Smart-Network-Monitor.git
-cd Smart-Network-Monitor
+git clone https://github.com/Maneesh-Relanto/system-pulse.git
+cd system-pulse
 ```
 
 **2. Create a virtual environment (optional but recommended):**
@@ -102,8 +127,26 @@ http://localhost:8000
 
 ## 📖 Usage Guide
 
+### View Selector
+Switch between three main views using the top navigation:
+- **Dashboard** - Default view with self-monitoring cards + top 20 processes
+- **Snapshot** - Comprehensive table of all processes with sorting and filtering
+- **All Apps** - Complete catalog of 50+ detected applications
+
 ### Dashboard View
-The default view shows the **top 20 active applications** ranked by relevance score (CPU + Memory + Network activity):
+The default view shows **4 self-monitoring cards** + **top 20 active applications** ranked by relevance score (CPU + Memory + Network activity):
+
+**Self-Monitoring Cards (update every 5 seconds):**
+- 🖥️ **CPU Usage** - Current percentage with progress bar and status color
+- 💾 **RAM Usage** - Current memory in MB with threshold indicator
+- ⏱️ **Uptime** - System runtime (e.g., "5 days, 3 hours, 15 minutes")
+- ⚠️ **Last Deviation** - Most recent anomaly detected:
+  - Shows process name (e.g., "Code.exe")
+  - Metric type (CPU or Memory)
+  - Severity: 🟡 Warning or 🔴 Critical
+  - Timestamp (e.g., "2 minutes ago")
+
+**Process Cards (top 20):**
 - Application logo and name
 - Process ID (PID)
 - Incoming/outgoing connections
@@ -115,7 +158,36 @@ The default view shows the **top 20 active applications** ranked by relevance sc
 - 🟡 **Yellow**: Caution (approaching limit)
 - 🔴 **Red**: Critical (over limit)
 
-### Pagination with Load More
+### System Snapshot View
+Click **"Snapshot"** to view comprehensive process analysis:
+
+**Table Features:**
+- **All 147+ running processes** displayed in real-time
+- **6 columns** with sortable headers (click column header to sort):
+  1. Process Name - Executable name
+  2. CPU % - Current CPU usage
+  3. Memory MB - Current RAM usage
+  4. Incoming - Incoming connection count
+  5. Outgoing - Outgoing connection count
+  6. PID - Process ID
+
+**Filtering:**
+- **Search Box** - Type process name to filter (case-insensitive, real-time)
+- **CPU Filter Slider** - Drag to show processes above threshold (0-100%)
+- **Memory Filter Slider** - Drag to show processes above threshold (0-1000 MB)
+- **Combined Filters** - Stack multiple filters for precise analysis
+
+**Sorting:**
+- Click any column header to sort (CPU, Memory, PID, etc.)
+- Visual indicators show sort direction (↑ ascending, ↓ descending)
+- Click again to reverse sort direction
+
+**CSV Export:**
+- Click **"📥 Download CSV"** to export entire snapshot
+- File saved as `system-snapshot-YYYY-MM-DD.csv`
+- Useful for analysis, logging, and archival
+
+### Pagination with Load More (Dashboard only)
 - **Page 1** automatically loads with top 20 processes
 - **Page indicator** shows "Page X of Y" (e.g., "Page 1 of 8" for 142 total processes)
 - **Load More button** appears when more processes are available
@@ -123,7 +195,7 @@ The default view shows the **top 20 active applications** ranked by relevance sc
 - **Real-time notifications** show:
   - 🔍 Reading system processes...
   - ✅ Loaded X processes (Page Y)
-- **Auto-refresh** only resets to Page 1, preserving your pagination during browsing
+- **Auto-refresh** returns to Page 1 to show latest top 20 processes
 
 ### All Apps View
 Click **"All Apps"** to browse all 50+ detected applications:
@@ -196,27 +268,37 @@ The logos will be downloaded and cached automatically on next run.
 
 ```
 System-Pulse/
-├── main.py                      # FastAPI server & pagination endpoints
+├── main.py                      # FastAPI server (213 lines)
+│                               # Endpoints: /api/dashboard, /api/snapshot, /api/self-monitor
 ├── app_detector.py              # App detection & logo management
-├── requirements.txt             # Python dependencies
+├── check_fallbacks.py           # Fallback handling for logo downloads
+├── init_logos.py                # Logo initialization script
+├── requirements.txt             # Python dependencies (5 packages)
 ├── README.md                    # This file
 ├── LICENSE                      # MIT License
 ├── .gitignore                   # Git exclusions
-├── index.html                   # Web interface
+├── index.html                   # Web interface (338 lines)
 ├── backend/                     # Backend optimization modules
 │   ├── scoring.py               # Relevance score calculation
-│   ├── cache.py                 # TTL caching layer
+│   ├── cache.py                 # TTL caching layer (1s TTL)
 │   ├── async_ops.py             # Async operation support
-│   └── timeout.py               # Request timeout middleware
-└── static/
-    ├── css/
-    │   └── style.css            # Tailwind CSS + custom themes
-    ├── js/
-    │   └── app.js               # Frontend logic (vanilla JS, 440+ lines)
-    └── logo/                    # Generated cache (git-ignored)
-        ├── windows/             # Windows app logos
-        ├── linux/               # Linux app logos
-        └── app_mappings.json    # Logo index
+│   ├── timeout.py               # Request timeout middleware (5s max)
+│   └── __init__.py              # Package initialization
+├── static/
+│   ├── css/
+│   │   └── style.css            # Tailwind CSS + 4 custom themes (242 lines)
+│   ├── js/
+│   │   └── app.js               # Frontend logic (vanilla JS, 746 lines)
+│   │                           # Features: views, filtering, sorting, export, settings
+│   └── logo/                    # Generated cache (git-ignored)
+│       ├── windows/             # Windows app logos (cached SVG)
+│       ├── linux/               # Linux app logos (cached SVG)
+│       └── app_mappings.json    # Logo index
+├── STRUCTURE.md                 # Project architecture documentation
+└── confidential/                # Documentation & reference files
+    ├── ARCHITECTURE.txt         # System design details
+    ├── GETTING_STARTED.txt      # Development guide
+    └── ... (additional docs)
 ```
 
 ### Backend Architecture
@@ -270,6 +352,73 @@ Returns paginated active applications with network connections, sorted by releva
 }
 ```
 
+### GET `/api/snapshot`
+Returns all running processes with filtering, sorting, and search support. **No caching** for real-time accuracy.
+
+**Query Parameters (all optional):**
+- `min_cpu` (float, default=0.0): Filter processes with CPU≥ threshold
+- `min_memory` (float, default=0.0): Filter processes with memory ≥ threshold (in MB)
+- `search` (string, default=""): Search process name (case-insensitive substring match)
+
+**Examples:**
+```
+/api/snapshot                          # All processes
+/api/snapshot?min_cpu=50               # Processes with CPU ≥ 50%
+/api/snapshot?min_memory=500           # Processes with memory ≥ 500 MB
+/api/snapshot?search=chrome            # Processes matching "chrome"
+/api/snapshot?min_cpu=50&min_memory=200&search=java  # Combined filters
+```
+
+**Response:**
+```json
+{
+  "items": [
+    {
+      "name": "Code.exe",
+      "pid": 2116,
+      "cpu": 117.4,
+      "memory": 3610.8,
+      "incoming": 0,
+      "outgoing": 0
+    },
+    {
+      "name": "python.exe",
+      "pid": 4521,
+      "cpu": 45.2,
+      "memory": 512.3,
+      "incoming": 8,
+      "outgoing": 3
+    }
+  ],
+  "total_items": 148
+}
+```
+
+### GET `/api/self-monitor`
+Returns System Pulse health metrics (CPU, RAM, Uptime, Deviation tracking).
+
+**Response:**
+```json
+{
+  "cpu_percent": 28.5,
+  "memory_mb": 8192.4,
+  "memory_percent": 65.3,
+  "uptime_seconds": 432000,
+  "last_deviation": {
+    "process_name": "Code.exe",
+    "metric": "cpu",
+    "value": 87.6,
+    "severity": "critical",
+    "timestamp": 1708873920.123
+  }
+}
+```
+
+**Deviation Severity Levels:**
+- **warning**: CPU >70% or Memory >500MB
+- **critical**: CPU >90% or Memory >800MB
+- `null` if no deviations detected
+
 ### GET `/api/all-apps`
 Returns all detected applications for current platform.
 
@@ -294,6 +443,18 @@ Returns the complete executable-to-logo mapping.
   "chrome.exe": "/static/logo/windows/Chrome.svg",
   "firefox.exe": "/static/logo/windows/Firefox.svg",
   ...
+}
+```
+
+### GET `/api/cache-stats`
+Returns cache performance metrics (internal endpoint).
+
+**Response:**
+```json
+{
+  "hits": 45,
+  "misses": 12,
+  "hit_rate": 0.789
 }
 ```
 
