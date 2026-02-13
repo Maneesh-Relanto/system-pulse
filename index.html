@@ -48,8 +48,8 @@
             </div>
         </header>
 
-        <!-- Self-Monitor Dashboard (4 Cards) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <!-- Self-Monitor Dashboard (4 Cards) - Dashboard View Only -->
+        <div id="self-monitor-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <!-- CPU Usage Card -->
             <div id="monitor-cpu-card" class="glass p-4 rounded-xl border border-slate-700">
                 <div class="flex items-center justify-between mb-3">
@@ -233,8 +233,8 @@
     </div>
 
     <!-- Settings Modal -->
-    <div id="settings-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-        <div class="glass p-8 rounded-2xl max-w-md w-full mx-4 border border-white/10">
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-md">
+        <div class="bg-slate-900 border border-slate-700 p-8 rounded-2xl max-w-md w-full mx-4 shadow-2xl">
             <h2 class="text-2xl font-bold mb-6 text-cyan-400">⚙️ Threshold Settings</h2>
             
             <!-- CPU Settings -->

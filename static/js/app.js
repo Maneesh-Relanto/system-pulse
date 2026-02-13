@@ -188,6 +188,7 @@ const App = {
         document.querySelector(`[data-view-btn="${view}"]`)?.classList.add('bg-cyan-500', 'text-white');
         
         // Hide/Show views
+        document.getElementById('self-monitor-container').style.display = view === 'dashboard' ? 'grid' : 'none';
         document.getElementById('dashboard').style.display = view === 'dashboard' ? 'grid' : 'none';
         document.getElementById('load-more-section').style.display = view === 'dashboard' ? 'flex' : 'none';
         document.getElementById('snapshot-view').style.display = view === 'snapshot' ? 'block' : 'none';
@@ -579,7 +580,7 @@ const App = {
                 <td class="px-4 py-3">
                     <div class="flex items-center gap-3">
                         ${app.logo ? `<img src="${app.logo}" alt="" class="w-5 h-5 rounded">` : '<div class="w-5 h-5 rounded bg-slate-700"></div>'}
-                        <span class="font-medium text-white truncate">${app.name}</span>
+                        <span class="font-medium text-slate-800 dark:text-slate-100 truncate">${app.name}</span>
                     </div>
                 </td>
                 <td class="px-4 py-3 text-right">
