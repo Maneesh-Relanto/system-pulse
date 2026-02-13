@@ -187,8 +187,15 @@ const App = {
         });
         document.querySelector(`[data-view-btn="${view}"]`)?.classList.add('bg-cyan-500', 'text-white');
         
+        // Hide/Show views
+        document.getElementById('dashboard').style.display = view === 'dashboard' ? 'grid' : 'none';
+        document.getElementById('load-more-section').style.display = view === 'dashboard' ? 'flex' : 'none';
+        document.getElementById('snapshot-view').style.display = view === 'snapshot' ? 'block' : 'none';
+        
         if (view === 'all-apps') {
             this.displayAllApps();
+        } else if (view === 'snapshot') {
+            this.loadSnapshot();
         } else {
             this.state.currentPage = 1;
             this.state.displayedItems = 0;
@@ -535,6 +542,185 @@ const App = {
                 this.showNotification('Failed to load processes', 'error', 5000);
             }
         }
+    },
+
+    async loadSnapshot() {
+        try {
+            const response = await fetch('/api/snapshot');
+            if (!response.ok) throw new Error('Failed to load snapshot');
+            const data = await response.json();
+            
+            // Store snapshot data in state
+            this.state.snapshotData = data.processes || [];
+            this.state.snapshotTotal = data.total || 0;
+            this.state.snapshotFiltered = data.filtered || 0;
+            
+            // Initialize sorting
+            this.state.snapshotSortKey = 'cpu';
+            this.state.snapshotSortOrder = 'desc';
+            
+            this.displaySnapshot();
+        } catch (error) {
+            console.error('Failed to load snapshot:', error);
+            this.showNotification('Failed to load system snapshot', 'error', 5000);
+        }
+    },
+
+    displaySnapshot() {
+        const tbody = document.getElementById('snapshot-tbody');
+        
+        if (!this.state.snapshotData || this.state.snapshotData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">No processes found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = this.state.snapshotData.map(app => `
+            <tr class="border-t border-slate-700/50 hover:bg-slate-800/30 transition-all">
+                <td class="px-4 py-3">
+                    <div class="flex items-center gap-3">
+                        ${app.logo ? `<img src="${app.logo}" alt="" class="w-5 h-5 rounded">` : '<div class="w-5 h-5 rounded bg-slate-700"></div>'}
+                        <span class="font-medium text-white truncate">${app.name}</span>
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-right">
+                    <span class="${app.cpu > 70 ? 'text-red-400 font-bold' : app.cpu > 20 ? 'text-yellow-400' : 'text-green-400'}">
+                        ${app.cpu.toFixed(1)}%
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-right">
+                    <span class="${app.memory > 500 ? 'text-red-400 font-bold' : app.memory > 200 ? 'text-yellow-400' : 'text-purple-400'}">
+                        ${app.memory.toFixed(1)}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-right text-blue-400">${app.incoming}</td>
+                <td class="px-4 py-3 text-right text-orange-400">${app.outgoing}</td>
+                <td class="px-4 py-3 text-right text-slate-500 text-sm">${app.pid}</td>
+            </tr>
+        `).join('');
+
+        // Update stats
+        document.getElementById('snapshot-total').textContent = this.state.snapshotTotal;
+        document.getElementById('snapshot-filtered').textContent = this.state.snapshotData.length;
+    },
+
+    filterSnapshot() {
+        const searchTerm = document.getElementById('snapshot-search')?.value || '';
+        const minCpu = parseFloat(document.getElementById('snapshot-cpu-filter')?.value || 0);
+        const minMemory = parseFloat(document.getElementById('snapshot-memory-filter')?.value || 0);
+
+        // Update display values
+        document.getElementById('snapshot-cpu-value').textContent = minCpu + '%';
+        document.getElementById('snapshot-memory-value').textContent = minMemory + ' MB';
+
+        // Fetch with filters
+        fetch(`/api/snapshot?min_cpu=${minCpu}&min_memory=${minMemory}&search=${encodeURIComponent(searchTerm)}`)
+            .then(r => r.json())
+            .then(data => {
+                this.state.snapshotData = data.processes || [];
+                this.state.snapshotFiltered = data.filtered || 0;
+                
+                // Reapply current sort
+                if (this.state.snapshotSortKey) {
+                    this.state.snapshotData.sort((a, b) => {
+                        const aVal = a[this.state.snapshotSortKey];
+                        const bVal = b[this.state.snapshotSortKey];
+                        
+                        if (typeof aVal === 'string') {
+                            return this.state.snapshotSortOrder === 'asc' ? 
+                                aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                        }
+                        return this.state.snapshotSortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+                    });
+                }
+                
+                this.displaySnapshot();
+            })
+            .catch(err => {
+                console.error('Filter error:', err);
+                this.showNotification('Failed to filter snapshot', 'error', 3000);
+            });
+    },
+
+    sortSnapshot(key) {
+        // Toggle sort order if clicking same column
+        if (this.state.snapshotSortKey === key) {
+            this.state.snapshotSortOrder = this.state.snapshotSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.state.snapshotSortKey = key;
+            this.state.snapshotSortOrder = key === 'name' ? 'asc' : 'desc';  // Name ascending, numbers descending
+        }
+
+        // Sort data
+        this.state.snapshotData.sort((a, b) => {
+            const aVal = a[key];
+            const bVal = b[key];
+            
+            if (typeof aVal === 'string') {
+                return this.state.snapshotSortOrder === 'asc' ? 
+                    aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            }
+            return this.state.snapshotSortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+        });
+
+        // Update sort indicator
+        document.querySelectorAll('#snapshot-table [id^="sort-"]').forEach(el => {
+            el.textContent = '▼▲';
+            el.classList.remove('text-cyan-400', 'text-slate-500');
+            el.classList.add('text-slate-500');
+        });
+        
+        const sortEl = document.getElementById(`sort-${key}`);
+        if (sortEl) {
+            sortEl.textContent = this.state.snapshotSortOrder === 'asc' ? '▲' : '▼';
+            sortEl.classList.remove('text-slate-500');
+            sortEl.classList.add('text-cyan-400');
+        }
+
+        this.displaySnapshot();
+    },
+
+    exportToCSV() {
+        if (!this.state.snapshotData || this.state.snapshotData.length === 0) {
+            this.showNotification('No data to export', 'warning', 3000);
+            return;
+        }
+
+        // Create CSV header
+        const headers = ['Process Name', 'CPU %', 'Memory MB', 'Incoming Connections', 'Outgoing Connections', 'PID'];
+        
+        // Create CSV rows
+        const rows = this.state.snapshotData.map(app => [
+            app.name,
+            app.cpu.toFixed(1),
+            app.memory.toFixed(1),
+            app.incoming,
+            app.outgoing,
+            app.pid
+        ]);
+
+        // Combine header and rows
+        const csv = [headers, ...rows]
+            .map(row => row.map(cell => {
+                // Escape quotes and wrap in quotes if contains comma
+                const str = String(cell);
+                return str.includes(',') ? `"${str.replace(/"/g, '""')}"` : str;
+            }).join(','))
+            .join('\n');
+
+        // Create blob and download
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `system-snapshot-${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        this.showNotification('Snapshot exported to CSV', 'success', 3000);
     },
 
     async updateDashboard() {

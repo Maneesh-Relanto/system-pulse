@@ -158,6 +158,52 @@ async def get_dashboard_data(page: int = 1):
     }
 
 
+@app.get("/api/snapshot")
+async def get_snapshot(min_cpu: float = 0.0, min_memory: float = 0.0, search: str = ""):
+    """
+    Get complete system snapshot with all running processes.
+    Optional filtering by CPU%, memory (MB), and process name search.
+    Fresh data (not cached) to ensure accuracy for analysis.
+    
+    Args:
+        min_cpu: Minimum CPU usage % to include (default 0.0 = no filter)
+        min_memory: Minimum memory usage MB to include (default 0.0 = no filter)
+        search: Search term to filter process names (case-insensitive)
+    
+    Returns:
+        List of all processes with full details
+    """
+    # Get fresh data from collect_process_data (not cached)
+    app_data = collect_process_data()
+    apps_list = list(app_data.values())
+    
+    # Apply relevance scoring
+    sorted_apps = sort_processes_by_relevance(apps_list)
+    
+    # Apply filters
+    filtered_apps = []
+    search_lower = search.lower()
+    
+    for app in sorted_apps:
+        # CPU filter
+        if app['cpu'] < min_cpu:
+            continue
+        # Memory filter
+        if app['memory'] < min_memory:
+            continue
+        # Search filter
+        if search and search_lower not in app['name'].lower():
+            continue
+        
+        filtered_apps.append(app)
+    
+    return {
+        "total": len(sorted_apps),
+        "filtered": len(filtered_apps),
+        "processes": filtered_apps
+    }
+
+
 @app.get("/api/cache-stats")
 def get_cache_stats():
     """Get cache performance statistics for monitoring."""

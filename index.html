@@ -24,7 +24,7 @@
             <div class="flex items-center gap-4">
                 <div class="flex gap-2" id="view-selector">
                     <button onclick="switchView('dashboard')" data-view-btn="dashboard" class="glass px-4 py-2 rounded-lg text-xs font-bold outline-none cursor-pointer transition-all bg-cyan-500 text-white">Dashboard</button>
-                    <button onclick="switchView('all-apps')" data-view-btn="all-apps" class="glass px-4 py-2 rounded-lg text-xs font-bold outline-none cursor-pointer transition-all bg-slate-700 text-slate-300 hover:bg-slate-600">All Apps</button>
+                    <button onclick="switchView('snapshot')" data-view-btn="snapshot" class="glass px-4 py-2 rounded-lg text-xs font-bold outline-none cursor-pointer transition-all bg-slate-700 text-slate-300 hover:bg-slate-600">📸 Snapshot</button>
                 </div>
                 
                 <div class="relative group" id="theme-selector">
@@ -103,6 +103,119 @@
                 Initializing Intelligence Matrix...
             </div>
         </main>
+
+        <!-- System Snapshot View (Hidden by default) -->
+        <div id="snapshot-view" class="hidden">
+            <!-- Snapshot Controls -->
+            <div class="glass p-6 rounded-2xl mb-6 border border-slate-700 space-y-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-cyan-400">📸 System Snapshot</h2>
+                    <button onclick="App.exportToCSV()" class="glass px-4 py-2 rounded-lg text-xs font-bold bg-green-500/20 hover:bg-green-500/40 transition-all">
+                        📥 Export CSV
+                    </button>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="flex gap-3">
+                    <input 
+                        type="text" 
+                        id="snapshot-search" 
+                        placeholder="🔍 Search process name..."
+                        onkeyup="App.filterSnapshot()"
+                        class="flex-1 glass px-4 py-2 rounded-lg text-sm bg-slate-800/50 border border-slate-600 text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-all"
+                    >
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 mb-2 block">Minimum CPU Usage (%)</label>
+                        <div class="flex gap-2 items-center">
+                            <input 
+                                type="range" 
+                                id="snapshot-cpu-filter" 
+                                min="0" 
+                                max="100" 
+                                value="0" 
+                                step="1"
+                                onchange="App.filterSnapshot()"
+                                class="flex-1"
+                            >
+                            <span id="snapshot-cpu-value" class="text-sm font-bold text-cyan-400 w-12 text-right">0%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 mb-2 block">Minimum Memory (MB)</label>
+                        <div class="flex gap-2 items-center">
+                            <input 
+                                type="range" 
+                                id="snapshot-memory-filter" 
+                                min="0" 
+                                max="1000" 
+                                value="0" 
+                                step="10"
+                                onchange="App.filterSnapshot()"
+                                class="flex-1"
+                            >
+                            <span id="snapshot-memory-value" class="text-sm font-bold text-purple-400 w-16 text-right">0 MB</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-xs text-slate-500">
+                    Total Processes: <span id="snapshot-total" class="font-bold text-cyan-400">0</span> | 
+                    Filtered: <span id="snapshot-filtered" class="font-bold text-green-400">0</span>
+                </div>
+            </div>
+
+            <!-- Snapshot Table -->
+            <div class="glass rounded-2xl border border-slate-700 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table id="snapshot-table" class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-700 bg-slate-900/50">
+                                <th class="px-4 py-3 text-left cursor-pointer hover:bg-slate-800/50 transition-all" onclick="App.sortSnapshot('name')">
+                                    <div class="flex items-center gap-2">
+                                        <span>Process Name</span>
+                                        <span class="text-xs text-slate-500" id="sort-name">▼▲</span>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-3 text-right cursor-pointer hover:bg-slate-800/50 transition-all" onclick="App.sortSnapshot('cpu')">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <span class="text-xs text-slate-500" id="sort-cpu">▼▲</span>
+                                        <span>CPU %</span>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-3 text-right cursor-pointer hover:bg-slate-800/50 transition-all" onclick="App.sortSnapshot('memory')">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <span class="text-xs text-slate-500" id="sort-memory">▼▲</span>
+                                        <span>Memory (MB)</span>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-3 text-right cursor-pointer hover:bg-slate-800/50 transition-all" onclick="App.sortSnapshot('incoming')">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <span class="text-xs text-slate-500" id="sort-incoming">▼▲</span>
+                                        <span>🔵 In</span>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-3 text-right cursor-pointer hover:bg-slate-800/50 transition-all" onclick="App.sortSnapshot('outgoing')">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <span class="text-xs text-slate-500" id="sort-outgoing">▼▲</span>
+                                        <span>🟠 Out</span>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-3 text-right">PID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="snapshot-tbody">
+                            <tr>
+                                <td colspan="6" class="px-4 py-8 text-center text-slate-500">Loading snapshot...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
         <!-- Load More Section -->
         <div class="mt-8 flex flex-col items-center gap-4" id="load-more-section">
