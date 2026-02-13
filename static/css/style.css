@@ -7,6 +7,8 @@
     --glass-border: rgba(59, 130, 246, 0.2);
     --glass-hover: rgba(255, 255, 255, 0.6);
     --accent: #3b82f6;
+    --avatar-text: #000000;
+    --avatar-border: #000000;
 }
 
 .theme-light {
@@ -17,6 +19,8 @@
     --glass-border: rgba(59, 130, 246, 0.2);
     --glass-hover: rgba(255, 255, 255, 0.6);
     --accent: #3b82f6;
+    --avatar-text: #000000;
+    --avatar-border: #000000;
 }
 
 .theme-warm {
@@ -28,6 +32,8 @@
     --glass-border: rgba(249, 115, 22, 0.35);
     --glass-hover: rgba(249, 115, 22, 0.2);
     --accent: #f97316;
+    --avatar-text: #000000;
+    --avatar-border: #000000;
 }
 
 .theme-pink {
@@ -39,6 +45,8 @@
     --glass-border: rgba(236, 72, 153, 0.35);
     --glass-hover: rgba(236, 72, 153, 0.2);
     --accent: #ec4899;
+    --avatar-text: #000000;
+    --avatar-border: #000000;
 }
 
 .theme-dark {
@@ -50,6 +58,8 @@
     --glass-border: rgba(255, 255, 255, 0.1);
     --glass-hover: rgba(255, 255, 255, 0.06);
     --accent: #22d3ee;
+    --avatar-text: #ffffff;
+    --avatar-border: #ffffff;
 }
 
 body {
@@ -72,10 +82,46 @@ body {
     color: var(--text-muted);
 }
 
+/* Fallback Avatar Styling */
+.avatar-fallback {
+    color: var(--avatar-text);
+    border: 2px solid var(--avatar-border);
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 900;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    height: 100%;
+    background: #475569;
+}
+
 .glass:hover {
     background: var(--glass-hover);
     transform: translateY(-4px);
     border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Avatar Letter Styling */
+.avatar-letter {
+    color: var(--avatar-text);
+    border: 2px solid var(--avatar-border);
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 900;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+    height: 100%;
+}
+
+.avatar-letter:hover {
+    transform: scale(1.1);
 }
 
 .app-grid {
