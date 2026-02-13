@@ -248,6 +248,74 @@ body {
     background-color: #06b6d4;
 }
 
+/* Search Autocomplete Dropdown */
+#search-autocomplete {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 8px;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 40;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(12px);
+}
+
+#search-autocomplete::-webkit-scrollbar {
+    width: 6px;
+}
+
+#search-autocomplete::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#search-autocomplete::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 3px;
+}
+
+#search-autocomplete::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+}
+
+/* Process Details Modal */
+#process-details-modal {
+    animation: modalFadeIn 0.2s ease-out;
+}
+
+#process-details-modal.hidden {
+    animation: modalFadeOut 0.2s ease-in;
+    pointer-events: none;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes modalFadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+.glass {
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    backdrop-filter: blur(8px);
+}
+
 /* Notification Animations */
 @keyframes slideIn {
     from {

@@ -232,6 +232,82 @@ def get_self_monitor():
     }
 
 
+@app.get("/api/process-search")
+async def search_processes():
+    """
+    Get all running processes for search auto-complete.
+    Returns process name, PID, and basics for search results.
+    """
+    try:
+        processes = []
+        for proc in psutil.process_iter(['pid', 'name', 'exe', 'status']):
+            try:
+                info = proc.as_dict(attrs=['pid', 'name', 'exe', 'status'])
+                processes.append({
+                    "pid": info['pid'],
+                    "name": info['name'],
+                    "exe": info.get('exe', ''),
+                    "status": info.get('status', 'unknown')
+                })
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        return {"processes": sorted(processes, key=lambda p: p['name'])}
+    except Exception as e:
+        return {"processes": [], "error": str(e)}
+
+
+@app.get("/api/process-details/{pid}")
+async def get_process_details(pid: int):
+    """
+    Get detailed information about a specific process.
+    Includes all metrics: CPU, memory, connections, file handles, etc.
+    """
+    try:
+        proc = psutil.Process(pid)
+        
+        # Get all process info
+        info = proc.as_dict(attrs=[
+            'pid', 'name', 'exe', 'cmdline', 'status', 'create_time',
+            'cpu_percent', 'memory_info', 'num_threads', 'ppid'
+        ])
+        
+        # Get connection info
+        connections = proc.net_connections(kind='inet')
+        num_connections = len(connections)
+        
+        # Get open files count
+        try:
+            open_files = len(proc.open_files())
+        except:
+            open_files = 0
+        
+        # Format create time
+        create_time = datetime.fromtimestamp(info['create_time']).isoformat() if info['create_time'] else None
+        
+        # Build response
+        return {
+            "pid": info['pid'],
+            "name": info['name'],
+            "exe": info.get('exe', ''),
+            "cmdline": ' '.join(info.get('cmdline', [])),
+            "status": info.get('status', 'unknown'),
+            "cpu_percent": round(info['cpu_percent'], 2),
+            "memory_mb": round(info['memory_info'].rss / 1024 / 1024, 2),
+            "memory_percent": round(proc.memory_percent(), 2),
+            "num_threads": info['num_threads'],
+            "num_connections": num_connections,
+            "open_files": open_files,
+            "created_at": create_time,
+            "parent_pid": info.get('ppid', 0),
+            "logo": APP_ICONS.get(info['name'].lower(), ''),
+            "found": True
+        }
+    except psutil.NoSuchProcess:
+        return {"found": False, "error": f"Process with PID {pid} not found"}
+    except Exception as e:
+        return {"found": False, "error": str(e)}
+
+
 @app.get("/api/all-apps")
 
 @app.get("/api/app-icons")

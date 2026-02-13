@@ -8,6 +8,7 @@ const App = {
         totalItems: 0,
         displayedItems: 0,
         allProcesses: [],
+        searchCache: [],  // Cache for search autocomplete
         refreshInterval: 30000,  // 30 seconds default
         refreshIntervalId: null,
         thresholds: {
@@ -24,6 +25,7 @@ const App = {
         this.startRefreshInterval();
         this.loadAllApps();
         this.updateSelfMonitor();
+        this.fetchSearchProcesses();  // Load processes for search autocomplete
         setInterval(() => this.updateSelfMonitor(), 5000);  // Update self-monitor every 5 seconds
         console.log('System Pulse - Local Dev Monitoring Initialized');
     },
@@ -722,6 +724,162 @@ const App = {
         document.body.removeChild(link);
         
         this.showNotification('Snapshot exported to CSV', 'success', 3000);
+    },
+
+    // ============ SEARCH AND MODAL METHODS ============
+
+    async fetchSearchProcesses() {
+        try {
+            const response = await fetch('/api/process-search');
+            const data = await response.json();
+            this.state.searchCache = data.processes || [];
+            console.log(`Loaded ${this.state.searchCache.length} processes for search`);
+        } catch (error) {
+            console.error('Error loading search processes:', error);
+            this.state.searchCache = [];
+        }
+    },
+
+    handleSearchInput(event) {
+        const input = event.target.value.toLowerCase().trim();
+        
+        if (input.length === 0) {
+            document.getElementById('search-autocomplete').classList.add('hidden');
+            return;
+        }
+
+        const filtered = this.state.searchCache.filter(p => 
+            p.name.toLowerCase().includes(input) ||
+            p.pid.toString().includes(input)
+        ).slice(0, 10);  // Limit to 10 results
+
+        this.showSearchResults(filtered);
+    },
+
+    handleSearchKeydown(event) {
+        const dropdown = document.getElementById('search-autocomplete');
+        const items = dropdown.querySelectorAll('[data-pid]');
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            const current = dropdown.querySelector('[data-selected="true"]');
+            if (current) {
+                current.removeAttribute('data-selected');
+            }
+            const next = current?.nextElementSibling || items[0];
+            if (next) {
+                next.setAttribute('data-selected', 'true');
+                next.scrollIntoView({ block: 'nearest' });
+            }
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            const current = dropdown.querySelector('[data-selected="true"]');
+            if (current) {
+                current.removeAttribute('data-selected');
+            }
+            const prev = current?.previousElementSibling || items[items.length - 1];
+            if (prev) {
+                prev.setAttribute('data-selected', 'true');
+                prev.scrollIntoView({ block: 'nearest' });
+            }
+        } else if (event.key === 'Enter') {
+            event.preventDefault();
+            const selected = dropdown.querySelector('[data-selected="true"]');
+            if (selected) {
+                const pid = selected.getAttribute('data-pid');
+                this.showProcessDetailsModal(pid);
+                document.getElementById('search-autocomplete').classList.add('hidden');
+                document.getElementById('process-search-input').value = '';
+            }
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            document.getElementById('search-autocomplete').classList.add('hidden');
+        }
+    },
+
+    showSearchResults(results) {
+        const container = document.getElementById('search-autocomplete');
+        
+        if (results.length === 0) {
+            container.innerHTML = '<div class="px-4 py-3 text-slate-400 text-sm">No processes found</div>';
+            container.classList.remove('hidden');
+            return;
+        }
+
+        container.innerHTML = results.map((p, idx) => `
+            <div data-pid="${p.pid}" class="px-4 py-3 cursor-pointer hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-0 flex items-center gap-3 ${idx === 0 ? 'bg-slate-700' : ''}" 
+                 data-selected="${idx === 0 ? 'true' : 'false'}"
+                 onmouseover="this.setAttribute('data-selected', 'true')"
+                 onmouseout="this.setAttribute('data-selected', 'false')"
+                 onclick="App.showProcessDetailsModal(${p.pid})">
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-slate-200 truncate">${p.name}</div>
+                    <div class="text-xs text-slate-500">PID: ${p.pid}</div>
+                </div>
+                <div class="text-xs text-slate-400">${p.status}</div>
+            </div>
+        `).join('');
+
+        container.classList.remove('hidden');
+    },
+
+    async showProcessDetailsModal(pid) {
+        const modal = document.getElementById('process-details-modal');
+        modal.classList.remove('hidden');
+
+        try {
+            const response = await fetch(`/api/process-details/${pid}`);
+            const data = await response.json();
+
+            if (!data.found) {
+                this.showNotification('Process not found or terminated', 'warning', 3000);
+                this.closeProcessDetailsModal();
+                return;
+            }
+
+            // Update modal with data
+            const formatDate = (dateStr) => {
+                const date = new Date(dateStr);
+                return date.toLocaleString();
+            };
+
+            // Avatar
+            const avatarDiv = document.getElementById('modal-process-avatar');
+            if (data.logo) {
+                avatarDiv.innerHTML = `<img src="${data.logo}" alt="${data.name}" class="w-full h-full rounded-lg object-contain" />`;
+            } else {
+                avatarDiv.textContent = data.name.charAt(0).toUpperCase();
+                avatarDiv.className = 'w-16 h-16 flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-500 text-white font-bold text-xl rounded-lg';
+            }
+
+            // Basic info
+            document.getElementById('modal-process-name').textContent = data.name;
+            document.getElementById('modal-process-pid').textContent = `PID: ${data.pid}`;
+
+            // Metrics
+            document.getElementById('modal-cpu').textContent = (data.cpu_percent || 0).toFixed(1);
+            document.getElementById('modal-memory').textContent = (data.memory_mb || 0).toFixed(1);
+            document.getElementById('modal-memory-percent').textContent = (data.memory_percent || 0).toFixed(1);
+            document.getElementById('modal-threads').textContent = data.num_threads || 0;
+            document.getElementById('modal-connections').textContent = data.num_connections || 0;
+            document.getElementById('modal-status').textContent = (data.status || 'unknown').charAt(0).toUpperCase() + (data.status || 'unknown').slice(1);
+
+            // Details
+            document.getElementById('modal-exe').textContent = data.exe || 'Unknown';
+            document.getElementById('modal-cmdline').textContent = data.cmdline || 'N/A';
+            document.getElementById('modal-created').textContent = formatDate(data.created_at);
+            document.getElementById('modal-ppid').textContent = data.parent_pid || 'N/A';
+            document.getElementById('modal-files').textContent = data.open_files || 0;
+
+        } catch (error) {
+            console.error('Error loading process details:', error);
+            this.showNotification('Failed to load process details', 'error', 3000);
+            this.closeProcessDetailsModal();
+        }
+    },
+
+    closeProcessDetailsModal() {
+        document.getElementById('process-details-modal').classList.add('hidden');
     },
 
     async updateDashboard() {

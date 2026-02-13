@@ -48,6 +48,26 @@
             </div>
         </header>
 
+        <!-- Process Search Bar -->
+        <div class="mb-8 relative">
+            <div class="relative">
+                <input 
+                    type="text" 
+                    id="process-search-input" 
+                    placeholder="Search processes... (e.g., python, code, chrome)" 
+                    class="w-full glass px-4 py-3 rounded-lg text-sm outline-none focus:ring-2 focus:ring-cyan-400 focus:bg-opacity-100 transition-all"
+                    onkeyup="App.handleSearchInput(event)"
+                    onkeydown="App.handleSearchKeydown(event)"
+                >
+                <div class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">🔍</div>
+            </div>
+            
+            <!-- Auto-complete Dropdown -->
+            <div id="search-autocomplete" class="hidden absolute top-full left-0 right-0 mt-2 bg-slate-800 rounded-lg border border-slate-700 shadow-xl z-50 max-h-64 overflow-y-auto">
+                <!-- Results will be populated by JavaScript -->
+            </div>
+        </div>
+
         <!-- Self-Monitor Dashboard (4 Cards) - Dashboard View Only -->
         <div id="self-monitor-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <!-- CPU Usage Card -->
@@ -331,7 +351,98 @@
         </div>
     </div>
 
-    <!-- Application Logic -->
-    <script src="/static/js/app.js"></script>
-</body>
+    <!-- Process Details Modal -->
+    <div id="process-details-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-md">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-8 max-w-2xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <!-- Close Button -->
+            <button onclick="App.closeProcessDetailsModal()" class="float-right text-2xl text-slate-400 hover:text-slate-100 transition-colors">✕</button>
+            
+            <!-- Header -->
+            <div class="flex items-center gap-4 mb-6 pb-4 border-b border-slate-700">
+                <div id="modal-process-avatar" class="w-16 h-16"></div>
+                <div>
+                    <h2 id="modal-process-name" class="text-2xl font-bold text-white mb-1">---</h2>
+                    <p id="modal-process-pid" class="text-sm text-slate-400">PID: ---</p>
+                </div>
+            </div>
+
+            <!-- Main Metrics Row -->
+            <div id="modal-metrics-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <!-- CPU -->
+                <div class="glass p-4 rounded-lg">
+                    <div class="text-xs text-slate-400 mb-2">CPU Usage</div>
+                    <div id="modal-cpu" class="text-2xl font-bold text-cyan-400">--</div>
+                    <div class="text-xs text-slate-500 mt-1">%</div>
+                </div>
+                
+                <!-- Memory -->
+                <div class="glass p-4 rounded-lg">
+                    <div class="text-xs text-slate-400 mb-2">Memory</div>
+                    <div id="modal-memory" class="text-2xl font-bold text-purple-400">--</div>
+                    <div class="text-xs text-slate-500 mt-1">MB</div>
+                </div>
+                
+                <!-- Threads -->
+                <div class="glass p-4 rounded-lg">
+                    <div class="text-xs text-slate-400 mb-2">Threads</div>
+                    <div id="modal-threads" class="text-2xl font-bold text-blue-400">--</div>
+                    <div class="text-xs text-slate-500 mt-1">active</div>
+                </div>
+                
+                <!-- Connections -->
+                <div class="glass p-4 rounded-lg">
+                    <div class="text-xs text-slate-400 mb-2">Connections</div>
+                    <div id="modal-connections" class="text-2xl font-bold text-green-400">--</div>
+                    <div class="text-xs text-slate-500 mt-1">open</div>
+                </div>
+            </div>
+
+            <!-- Status Section -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="glass p-4 rounded-lg">
+                    <div class="text-xs text-slate-400 mb-2">Status</div>
+                    <div id="modal-status" class="text-sm font-bold text-green-400">---</div>
+                </div>
+                <div class="glass p-4 rounded-lg">
+                    <div class="text-xs text-slate-400 mb-2">Memory %</div>
+                    <div id="modal-memory-percent" class="text-sm font-bold text-slate-300">---%</div>
+                </div>
+            </div>
+
+            <!-- Details Section -->
+            <div class="glass p-4 rounded-lg mb-6">
+                <h3 class="text-sm font-bold text-slate-300 mb-3">📋 Details</h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <div class="text-xs text-slate-500 mb-1">Executable Path</div>
+                        <div id="modal-exe" class="text-slate-200 break-all font-mono text-xs bg-slate-800 p-2 rounded">---</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-500 mb-1">Command Line</div>
+                        <div id="modal-cmdline" class="text-slate-200 break-all font-mono text-xs bg-slate-800 p-2 rounded max-h-24 overflow-y-auto">---</div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-slate-500 mb-1">Created</div>
+                            <div id="modal-created" class="text-slate-300 text-xs">---</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500 mb-1">Parent PID</div>
+                            <div id="modal-ppid" class="text-slate-300 text-xs">---</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-500 mb-1">Open Files</div>
+                        <div id="modal-files" class="text-slate-300 text-xs">---</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Close Button -->
+            <button onclick="App.closeProcessDetailsModal()" class="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-bold transition-all">
+                Close
+            </button>
+        </div>
+    </div>
+
 </html>
