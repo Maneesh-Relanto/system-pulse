@@ -219,7 +219,7 @@ const App = {
                 'from-cyan-500 to-blue-600'
             ];
             const gradient = colors[(app.pid || app.exe_name || '').length % colors.length];
-            return `<div class="w-full h-full rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-2xl font-black text-slate-900 dark:text-white shadow-lg ring-2 ring-slate-900 dark:ring-slate-300 transform group-hover:scale-110 transition-transform duration-300">
+            return `<div class="w-full h-full rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-2xl font-black text-white shadow-lg ring-2 ring-slate-900 dark:ring-slate-300 transform group-hover:scale-110 transition-transform duration-300">
                 ${firstLetter}
             </div>`;
         }
@@ -227,7 +227,7 @@ const App = {
             <img src="${logo}" alt="${app.name || app.display_name}" 
                 class="w-full h-full object-contain filter drop-shadow-md group-hover:scale-110 transition-all duration-300"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-            <div class="hidden w-full h-full rounded-2xl bg-slate-700 dark:bg-slate-600 flex items-center justify-center text-2xl font-black text-slate-900 dark:text-white shadow-lg ring-2 ring-slate-900 dark:ring-slate-300">
+            <div class="hidden w-full h-full rounded-2xl bg-slate-700 flex items-center justify-center text-2xl font-black text-white shadow-lg ring-2 ring-slate-900 dark:ring-slate-300">
                 ${firstLetter}
             </div>`;
     },
