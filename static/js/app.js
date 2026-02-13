@@ -21,12 +21,38 @@ const App = {
 
     init() {
         this.loadSettings();
+        
+        // Show loading indicator when app starts
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const loadingMsg = document.getElementById('loading-message');
+        if (loadingMsg) loadingMsg.classList.remove('hidden');
+        if (loadingIndicator) loadingIndicator.classList.remove('hidden');
+        
         this.updateDashboard();
         this.startRefreshInterval();
         this.loadAllApps();
+        
+        // Update self-monitor once on load
         this.updateSelfMonitor();
-        this.fetchSearchProcesses();  // Load processes for search autocomplete
+        
+        // Fetch search processes once on load
+        this.fetchSearchProcesses();
+        
+        // Regular updates
         setInterval(() => this.updateSelfMonitor(), 5000);  // Update self-monitor every 5 seconds
+        
+        // Add click-outside handler to close search dropdown
+        document.addEventListener('click', (e) => {
+            const searchContainer = document.getElementById('search-autocomplete');
+            const searchInput = document.getElementById('process-search-input');
+            
+            if (searchContainer && searchInput) {
+                if (!searchContainer.contains(e.target) && !searchInput.contains(e.target)) {
+                    searchContainer.classList.add('hidden');
+                }
+            }
+        });
+        
         console.log('System Pulse - Local Dev Monitoring Initialized');
     },
 
@@ -236,8 +262,12 @@ const App = {
 
     async loadAllApps() {
         try {
-            const response = await fetch('/api/all-apps');
-            if (!response.ok) throw new Error('Failed to load apps');
+            const url = `${window.location.origin}/api/all-apps`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`HTTP ${response.status}: ${error}`);
+            }
             const apps = await response.json();
             // Store for later display
             this.state.allApps = apps;
@@ -248,8 +278,12 @@ const App = {
 
     async updateSelfMonitor() {
         try {
-            const response = await fetch('/api/self-monitor');
-            if (!response.ok) throw new Error('Failed to fetch self-monitor data');
+            const url = `${window.location.origin}/api/self-monitor`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`HTTP ${response.status}: ${error}`);
+            }
             const data = await response.json();
             
             // Update CPU Card
@@ -486,7 +520,8 @@ const App = {
 
     async fetchAndDisplay(showNotifications = false) {
         try {
-            const response = await fetch(`/api/dashboard?page=${this.state.currentPage}&t=${Date.now()}`);
+            const url = `${window.location.origin}/api/dashboard?page=${this.state.currentPage}&t=${Date.now()}`;
+            const response = await fetch(url);
             
             if (!response.ok) {
                 if (showNotifications) {
@@ -509,6 +544,9 @@ const App = {
                 if (this.state.currentPage === 1) {
                     container.innerHTML = '<div class="col-span-4 text-center text-slate-500 py-20">Monitoring network connections...</div>';
                 }
+                // Hide loading indicators for empty results
+                if (loadingIndicator) loadingIndicator.classList.add('hidden');
+                if (loadingMsg) loadingMsg.classList.add('hidden');
                 this.updatePaginationInfo();
                 this.showNotification('No additional processes found', 'warning', 3000);
                 return;
@@ -549,7 +587,8 @@ const App = {
 
     async loadSnapshot() {
         try {
-            const response = await fetch('/api/snapshot');
+            const url = `${window.location.origin}/api/snapshot`;
+            const response = await fetch(url);
             if (!response.ok) throw new Error('Failed to load snapshot');
             const data = await response.json();
             
@@ -616,7 +655,8 @@ const App = {
         document.getElementById('snapshot-memory-value').textContent = minMemory + ' MB';
 
         // Fetch with filters
-        fetch(`/api/snapshot?min_cpu=${minCpu}&min_memory=${minMemory}&search=${encodeURIComponent(searchTerm)}`)
+        const url = `${window.location.origin}/api/snapshot?min_cpu=${minCpu}&min_memory=${minMemory}&search=${encodeURIComponent(searchTerm)}`;
+        fetch(url)
             .then(r => r.json())
             .then(data => {
                 this.state.snapshotData = data.processes || [];
@@ -730,7 +770,12 @@ const App = {
 
     async fetchSearchProcesses() {
         try {
-            const response = await fetch('/api/process-search');
+            const url = `${window.location.origin}/api/process-search`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`HTTP ${response.status}: ${error}`);
+            }
             const data = await response.json();
             this.state.searchCache = data.processes || [];
             console.log(`Loaded ${this.state.searchCache.length} processes for search`);
@@ -754,6 +799,11 @@ const App = {
         ).slice(0, 10);  // Limit to 10 results
 
         this.showSearchResults(filtered);
+    },
+
+    closeSearchDropdown() {
+        document.getElementById('search-autocomplete').classList.add('hidden');
+        document.getElementById('process-search-input').value = '';
     },
 
     handleSearchKeydown(event) {
@@ -788,12 +838,11 @@ const App = {
             if (selected) {
                 const pid = selected.getAttribute('data-pid');
                 this.showProcessDetailsModal(pid);
-                document.getElementById('search-autocomplete').classList.add('hidden');
-                document.getElementById('process-search-input').value = '';
+                this.closeSearchDropdown();
             }
         } else if (event.key === 'Escape') {
             event.preventDefault();
-            document.getElementById('search-autocomplete').classList.add('hidden');
+            this.closeSearchDropdown();
         }
     },
 
@@ -801,22 +850,23 @@ const App = {
         const container = document.getElementById('search-autocomplete');
         
         if (results.length === 0) {
-            container.innerHTML = '<div class="px-4 py-3 text-slate-400 text-sm">No processes found</div>';
+            container.innerHTML = '<div class="search-item" style="cursor:default; justify-content: center; padding: 20px;"><div class="search-item-name">No processes found</div></div>';
             container.classList.remove('hidden');
             return;
         }
 
         container.innerHTML = results.map((p, idx) => `
-            <div data-pid="${p.pid}" class="px-4 py-3 cursor-pointer hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-0 flex items-center gap-3 ${idx === 0 ? 'bg-slate-700' : ''}" 
+            <div data-pid="${p.pid}" class="search-item" 
                  data-selected="${idx === 0 ? 'true' : 'false'}"
                  onmouseover="this.setAttribute('data-selected', 'true')"
                  onmouseout="this.setAttribute('data-selected', 'false')"
-                 onclick="App.showProcessDetailsModal(${p.pid})">
-                <div class="flex-1 min-w-0">
-                    <div class="font-semibold text-slate-200 truncate">${p.name}</div>
-                    <div class="text-xs text-slate-500">PID: ${p.pid}</div>
+                 onclick="App.showProcessDetailsModal(${p.pid}); App.closeSearchDropdown();">
+                <div class="search-item-content">
+                    <div class="search-item-name">${p.name}</div>
+                    <div class="search-item-info">
+                        <span class="search-item-pid">PID: ${p.pid}</span>
+                    </div>
                 </div>
-                <div class="text-xs text-slate-400">${p.status}</div>
             </div>
         `).join('');
 
@@ -828,7 +878,8 @@ const App = {
         modal.classList.remove('hidden');
 
         try {
-            const response = await fetch(`/api/process-details/${pid}`);
+            const url = `${window.location.origin}/api/process-details/${pid}`;
+            const response = await fetch(url);
             const data = await response.json();
 
             if (!data.found) {

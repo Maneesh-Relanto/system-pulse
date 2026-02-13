@@ -12,8 +12,9 @@ from backend.timeout import RequestTimeoutMiddleware
 
 app = FastAPI(title="System Pulse API")
 
-# Add request timeout protection (5 seconds maximum)
-app.add_middleware(RequestTimeoutMiddleware, timeout_seconds=5.0)
+# Add request timeout protection (10 seconds maximum)
+# Static file requests are excluded to prevent unnecessary timeouts on asset loads
+app.add_middleware(RequestTimeoutMiddleware, timeout_seconds=10.0)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -211,7 +212,7 @@ def get_cache_stats():
 
 
 @app.get("/api/self-monitor")
-def get_self_monitor():
+async def get_self_monitor():
     """Get System Pulse's own resource usage, uptime, and deviation tracking."""
     process = psutil.Process(os.getpid())
     cpu_percent = process.cpu_percent(interval=0.1)
@@ -309,6 +310,11 @@ async def get_process_details(pid: int):
 
 
 @app.get("/api/all-apps")
+async def get_all_apps():
+    """Get all running processes with full details (not paginated)."""
+    app_data = collect_process_data()
+    apps_list = list(app_data.values())
+    return {"apps": sort_processes_by_relevance(apps_list)}
 
 @app.get("/api/app-icons")
 def get_app_icons():

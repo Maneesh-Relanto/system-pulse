@@ -63,6 +63,12 @@ class RequestTimeoutMiddleware:
             await self.app(scope, receive, send)
             return
         
+        # Skip timeout for static files (they should load quickly)
+        path = scope.get("path", "")
+        if path.startswith("/static/"):
+            await self.app(scope, receive, send)
+            return
+        
         try:
             # Wrap the app call with timeout
             await asyncio.wait_for(
@@ -78,7 +84,7 @@ class RequestTimeoutMiddleware:
             })
             await send({
                 "type": "http.response.body",
-                "body": b'{"error":"Request timeout","message":"Request exceeded 5 second limit"}',
+                "body": b'{"error":"Request timeout","message":"Request exceeded timeout limit"}',
             })
         except Exception:
             # Let other exceptions be handled by normal error handling
