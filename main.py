@@ -3,6 +3,8 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 import os
+import time
+from datetime import datetime
 from app_detector import get_detected_apps, get_app_info
 from backend.scoring import sort_processes_by_relevance
 from backend.cache import get_cache
@@ -25,15 +27,26 @@ ITEMS_PER_PAGE = 20
 # Get cache instance
 cache = get_cache()
 
+# Self-monitoring tracking
+APP_START_TIME = time.time()
+LAST_DEVIATION = {
+    "process_name": "None",
+    "metric": "N/A",
+    "value": 0,
+    "timestamp": datetime.now().isoformat()
+}
+
 
 def collect_process_data():
     """
     Expensive operation: Collect all process and connection data.
     This is called once and cached for 1 second to avoid redundant lookups.
+    Also tracks process deviations (excessive resource use).
     
     Returns:
         dict: Aggregated process data with connection info
     """
+    global LAST_DEVIATION
     apps = {}
     
     # Get network connections once (expensive call)
@@ -49,6 +62,19 @@ def collect_process_data():
                 pinfo = proc.info
                 name = pinfo['name']
                 pid = pinfo['pid']
+                cpu = pinfo['cpu_percent'] or 0.0
+                memory = (pinfo['memory_info'].rss / (1024 * 1024)) if pinfo['memory_info'] else 0  # MB
+                
+                # Track deviations - processes using excessive resources
+                if cpu > 70 or memory > 500:  # Extreme resource use
+                    severity = "critical" if (cpu > 90 or memory > 800) else "warning"
+                    LAST_DEVIATION = {
+                        "process_name": name,
+                        "metric": f"CPU: {cpu}%" if cpu > 70 else f"Memory: {memory}MB",
+                        "value": round(cpu, 1) if cpu > 70 else round(memory, 1),
+                        "severity": severity,
+                        "timestamp": datetime.now().isoformat()
+                    }
                 
                 # Grouping by name to aggregate stats if multi-process (like Chrome)
                 if name not in apps:
@@ -58,13 +84,13 @@ def collect_process_data():
                         "logo": APP_ICONS.get(name.lower(), DEFAULT_ICON),
                         "incoming": 0,
                         "outgoing": 0,
-                        "cpu": pinfo['cpu_percent'] or 0.0,
-                        "memory": (pinfo['memory_info'].rss / (1024 * 1024)) if pinfo['memory_info'] else 0  # MB
+                        "cpu": cpu,
+                        "memory": memory
                     }
                 else:
                     # Aggregate for multi-process apps
-                    apps[name]["cpu"] += pinfo['cpu_percent'] or 0.0
-                    apps[name]["memory"] += (pinfo['memory_info'].rss / (1024 * 1024)) if pinfo['memory_info'] else 0
+                    apps[name]["cpu"] += cpu
+                    apps[name]["memory"] += memory
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
     except Exception as e:
@@ -136,6 +162,28 @@ async def get_dashboard_data(page: int = 1):
 def get_cache_stats():
     """Get cache performance statistics for monitoring."""
     return cache.get_stats()
+
+
+@app.get("/api/self-monitor")
+def get_self_monitor():
+    """Get System Pulse's own resource usage, uptime, and deviation tracking."""
+    process = psutil.Process(os.getpid())
+    cpu_percent = process.cpu_percent(interval=0.1)
+    memory_info = process.memory_info()
+    memory_mb = memory_info.rss / (1024 * 1024)  # Convert bytes to MB
+    
+    # Calculate uptime in seconds
+    uptime_seconds = time.time() - APP_START_TIME
+    
+    return {
+        "cpu_percent": round(cpu_percent, 2),
+        "memory_mb": round(memory_mb, 2),
+        "cpu_alert": cpu_percent > 15,
+        "memory_alert": memory_mb > 200,
+        "status": "critical" if (cpu_percent > 15 or memory_mb > 200) else "healthy",
+        "uptime_seconds": round(uptime_seconds, 2),
+        "last_deviation": LAST_DEVIATION
+    }
 
 
 @app.get("/api/all-apps")

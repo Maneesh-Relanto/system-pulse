@@ -23,6 +23,8 @@ const App = {
         this.updateDashboard();
         this.startRefreshInterval();
         this.loadAllApps();
+        this.updateSelfMonitor();
+        setInterval(() => this.updateSelfMonitor(), 5000);  // Update self-monitor every 5 seconds
         console.log('System Pulse - Local Dev Monitoring Initialized');
     },
 
@@ -231,6 +233,103 @@ const App = {
             this.state.allApps = apps;
         } catch (error) {
             console.error('Failed to load all apps:', error);
+        }
+    },
+
+    async updateSelfMonitor() {
+        try {
+            const response = await fetch('/api/self-monitor');
+            if (!response.ok) throw new Error('Failed to fetch self-monitor data');
+            const data = await response.json();
+            
+            // Update CPU Card
+            const cpuPercent = data.cpu_percent;
+            const cpuBar = document.getElementById('monitor-cpu-bar');
+            const cpuText = document.getElementById('monitor-cpu-percent');
+            const cpuStatus = document.getElementById('monitor-cpu-status');
+            if (cpuBar) {
+                cpuBar.style.width = Math.min(cpuPercent, 100) + '%';
+                cpuBar.className = cpuPercent > 15 ? 'bg-gradient-to-r from-red-400 to-red-600 h-full rounded-full transition-all duration-300' : 'bg-gradient-to-r from-cyan-400 to-blue-500 h-full rounded-full transition-all duration-300';
+            }
+            if (cpuText) cpuText.textContent = cpuPercent.toFixed(1) + '%';
+            if (cpuStatus) cpuStatus.textContent = cpuPercent > 15 ? '⚠️ Warning' : '✓ Healthy';
+            
+            // Update RAM Card
+            const memoryMb = data.memory_mb;
+            const ramBar = document.getElementById('monitor-ram-bar');
+            const ramText = document.getElementById('monitor-ram-mb');
+            const ramStatus = document.getElementById('monitor-ram-status');
+            const memPercent = Math.min((memoryMb / 500) * 100, 100);
+            if (ramBar) {
+                ramBar.style.width = memPercent + '%';
+                ramBar.className = memoryMb > 200 ? 'bg-gradient-to-r from-red-400 to-red-600 h-full rounded-full transition-all duration-300' : 'bg-gradient-to-r from-purple-400 to-pink-500 h-full rounded-full transition-all duration-300';
+            }
+            if (ramText) ramText.textContent = memoryMb.toFixed(1) + ' MB';
+            if (ramStatus) ramStatus.textContent = memoryMb > 200 ? '⚠️ Warning' : '✓ Healthy';
+            
+            // Update Uptime Card
+            const uptimeSeconds = data.uptime_seconds;
+            const uptimeFormatted = this.formatUptime(uptimeSeconds);
+            const uptimeText = document.getElementById('monitor-uptime-text');
+            const uptimeDetail = document.getElementById('monitor-uptime-detail');
+            if (uptimeText) uptimeText.textContent = uptimeFormatted.short;
+            if (uptimeDetail) uptimeDetail.textContent = `Running for ${uptimeFormatted.long}`;
+            
+            // Update Last Deviation Card
+            const deviation = data.last_deviation;
+            const deviationApp = document.getElementById('monitor-deviation-app');
+            const deviationMetric = document.getElementById('monitor-deviation-metric');
+            const deviationTime = document.getElementById('monitor-deviation-time');
+            const deviationSeverity = document.getElementById('monitor-deviation-severity');
+            
+            if (deviation && deviation.process_name !== 'None') {
+                if (deviationApp) deviationApp.textContent = `⚠️ ${deviation.process_name}`;
+                if (deviationMetric) deviationMetric.textContent = `${deviation.metric}`;
+                if (deviationSeverity) deviationSeverity.textContent = deviation.severity === 'critical' ? '🔴 Critical' : '🟡 Warning';
+                if (deviationTime) {
+                    const deviationDate = new Date(deviation.timestamp);
+                    const now = new Date();
+                    const diffMs = now - deviationDate;
+                    const diffSec = Math.floor(diffMs / 1000);
+                    let timeAgo = '';
+                    if (diffSec < 60) timeAgo = `${diffSec}s ago`;
+                    else if (diffSec < 3600) timeAgo = `${Math.floor(diffSec / 60)}m ago`;
+                    else timeAgo = `${Math.floor(diffSec / 3600)}h ago`;
+                    deviationTime.textContent = `Last seen: ${timeAgo}`;
+                }
+                document.getElementById('monitor-deviation-card').style.borderColor = deviation.severity === 'critical' ? 'rgba(239, 68, 68, 0.5)' : 'rgba(217, 119, 6, 0.5)';
+            } else {
+                if (deviationApp) deviationApp.textContent = '✓ No deviations';
+                if (deviationMetric) deviationMetric.textContent = 'System running smoothly';
+                if (deviationSeverity) deviationSeverity.textContent = '🟢 Good';
+                if (deviationTime) deviationTime.textContent = '---';
+                document.getElementById('monitor-deviation-card').style.borderColor = 'rgba(34, 197, 94, 0.3)';
+            }
+        } catch (error) {
+            console.error('Failed to update self-monitor:', error);
+        }
+    },
+
+    formatUptime(seconds) {
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        
+        if (seconds < 60) {
+            return { short: secs + 's', long: secs + ' seconds' };
+        } else if (seconds < 3600) {
+            return { short: minutes + 'm ' + secs + 's', long: minutes + ' minutes, ' + secs + ' seconds' };
+        } else if (seconds < 86400) {
+            return { 
+                short: hours + 'h ' + minutes + 'm', 
+                long: hours + ' hour' + (hours > 1 ? 's' : '') + ', ' + minutes + ' minute' + (minutes !== 1 ? 's' : '') 
+            };
+        } else {
+            return { 
+                short: days + 'd ' + hours + 'h', 
+                long: days + ' day' + (days > 1 ? 's' : '') + ', ' + hours + ' hour' + (hours !== 1 ? 's' : '') 
+            };
         }
     },
 

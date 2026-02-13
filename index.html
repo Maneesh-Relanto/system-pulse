@@ -48,6 +48,56 @@
             </div>
         </header>
 
+        <!-- Self-Monitor Dashboard (4 Cards) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <!-- CPU Usage Card -->
+            <div id="monitor-cpu-card" class="glass p-4 rounded-xl border border-slate-700">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-sm font-semibold text-slate-400">💻 CPU Usage</div>
+                    <div class="text-xs text-slate-500">System Pulse</div>
+                </div>
+                <div class="text-2xl font-bold text-cyan-400" id="monitor-cpu-percent">0%</div>
+                <div class="w-full bg-slate-700 rounded-full h-2 mt-3 overflow-hidden">
+                    <div id="monitor-cpu-bar" class="bg-gradient-to-r from-cyan-400 to-blue-500 h-full rounded-full transition-all duration-300 w-0"></div>
+                </div>
+                <div class="text-xs text-slate-500 mt-2" id="monitor-cpu-status">Healthy</div>
+            </div>
+
+            <!-- RAM Usage Card -->
+            <div id="monitor-ram-card" class="glass p-4 rounded-xl border border-slate-700">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-sm font-semibold text-slate-400">🧠 RAM Usage</div>
+                    <div class="text-xs text-slate-500">System Pulse</div>
+                </div>
+                <div class="text-2xl font-bold text-purple-400" id="monitor-ram-mb">0 MB</div>
+                <div class="w-full bg-slate-700 rounded-full h-2 mt-3 overflow-hidden">
+                    <div id="monitor-ram-bar" class="bg-gradient-to-r from-purple-400 to-pink-500 h-full rounded-full transition-all duration-300 w-0"></div>
+                </div>
+                <div class="text-xs text-slate-500 mt-2" id="monitor-ram-status">Healthy</div>
+            </div>
+
+            <!-- Uptime Card -->
+            <div id="monitor-uptime-card" class="glass p-4 rounded-xl border border-slate-700">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-sm font-semibold text-slate-400">⏱️ Uptime</div>
+                    <div class="text-xs text-slate-500">Running</div>
+                </div>
+                <div class="text-2xl font-bold text-green-400" id="monitor-uptime-text">0s</div>
+                <div class="text-xs text-slate-500 mt-3 leading-relaxed" id="monitor-uptime-detail">Just started</div>
+            </div>
+
+            <!-- Last Deviation Card -->
+            <div id="monitor-deviation-card" class="glass p-4 rounded-xl border border-slate-700">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-sm font-semibold text-slate-400">⚠️ Last Deviation</div>
+                    <div class="text-xs text-slate-500" id="monitor-deviation-severity">None</div>
+                </div>
+                <div class="text-sm font-bold text-slate-200 truncate" id="monitor-deviation-app">No deviations</div>
+                <div class="text-xs text-slate-500 mt-3" id="monitor-deviation-metric">N/A</div>
+                <div class="text-xs text-slate-400 mt-2" id="monitor-deviation-time">---</div>
+            </div>
+        </div>
+
         <main id="dashboard" class="app-grid">
             <div class="col-span-4 py-20 text-center animate-pulse text-slate-500 text-xl font-semibold">
                 Initializing Intelligence Matrix...
