@@ -82,19 +82,32 @@ body {
     color: var(--text-muted);
 }
 
-/* Fallback Avatar Styling */
-.avatar-fallback {
-    color: var(--avatar-text);
-    border: 2px solid var(--avatar-border);
+/* ============ Avatar Button Styling ============ */
+.avatar-button {
+    width: 100%;
+    height: 100%;
     border-radius: 1rem;
+    border: 2px solid var(--avatar-border);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
     font-weight: 900;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    height: 100%;
+    color: var(--avatar-text);
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.avatar-button.gradient {
+    background: var(--avatar-gradient, linear-gradient(135deg, #3b82f6 0%, #6366f1 100%));
+}
+
+.avatar-button.fallback {
     background: #475569;
 }
 
@@ -102,26 +115,6 @@ body {
     background: var(--glass-hover);
     transform: translateY(-4px);
     border-color: rgba(255, 255, 255, 0.2);
-}
-
-/* Avatar Letter Styling */
-.avatar-letter {
-    color: var(--avatar-text);
-    border: 2px solid var(--avatar-border);
-    border-radius: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    font-weight: 900;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    width: 100%;
-    height: 100%;
-}
-
-.avatar-letter:hover {
-    transform: scale(1.1);
 }
 
 .app-grid {

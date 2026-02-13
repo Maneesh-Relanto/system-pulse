@@ -219,7 +219,7 @@ const App = {
                 'from-cyan-500 to-blue-600'
             ];
             const gradient = colors[(app.pid || app.exe_name || '').length % colors.length];
-            return `<div class="avatar-letter bg-gradient-to-br ${gradient}">
+            return `<div class="avatar-button gradient bg-gradient-to-br ${gradient}">
                 ${firstLetter}
             </div>`;
         }
@@ -227,7 +227,7 @@ const App = {
             <img src="${logo}" alt="${app.name || app.display_name}" 
                 class="w-full h-full object-contain filter drop-shadow-md group-hover:scale-110 transition-all duration-300"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-            <div class="hidden avatar-fallback">
+            <div class="hidden avatar-button fallback">
                 ${firstLetter}
             </div>`;
     },
